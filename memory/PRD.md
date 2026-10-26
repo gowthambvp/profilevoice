@@ -18,7 +18,9 @@ User choices: roles/terminology taken from the attached HTML; do NOT remember ro
 
 - Phase 2 complete (Oct 2026): central DataStore (src/state/DataStore.tsx) with campaign/task CRUD, workflow status actions per role (taskActions in roles.ts), due-date changes, assets from approved work, activity log; campaign list/detail/edit, task list (My/Team/All, search, filters, sort, due grouping, priority)/detail/edit; reset demo data; testing iterations 2-3 passed
 
+- Phase 3 complete (Oct 2026): Content Studio + Ad Studio (/studio/[kind], /studio/editor) — format, campaign + linked task, brand voice, tone, length/channel/platform/ratio/duration, local template generator (src/services/generator.ts), editable output, preview (article/post/image & video ad), copy to clipboard (expo-clipboard), save/edit/delete drafts, discard guard, role-aware approval synced with linked tasks and campaign assets, task -> studio cross-link; Publishers have no studio access; testing iterations 4-7 passed
+
 ## Backlog
-- P0: Phase 3 (awaiting user approval)
+- P0: Phase 4 (awaiting user approval)
 - P1: Approvals, Schedule queue, Content Studio, Ad Studio real screens
 - P2: Backend API integration, real auth

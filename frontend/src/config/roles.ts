@@ -4,7 +4,7 @@
 import type { Href } from "expo-router";
 
 import { destinationHref } from "@/src/config/modules";
-import type { ModuleKey, RoleId, Task, TaskStatus } from "@/src/types";
+import type { Draft, DraftStatus, ModuleKey, RoleId, Task, TaskStatus } from "@/src/types";
 
 export type DashboardCardKey = "campaigns" | "tasks" | "approvals" | "scheduled" | "dueSoon";
 
@@ -122,7 +122,41 @@ export const can = {
   manageTasks: (r: RoleId) => isManager(r),
   review: (r: RoleId) => isManager(r) || r === "publisher",
   changeDue: (r: RoleId, t: Task) => isManager(r) || (r === "publisher" && t.assignee === ROLES[r].personId),
+  /** Publishers schedule approved work; they don't make content or ads. */
+  useStudio: (r: RoleId) => r !== "publisher",
+  editDraft: (r: RoleId, d: Draft) => isManager(r) || (d.owner === ROLES[r].personId && (d.status === "Draft" || d.status === "Changes requested")),
 };
+
+export interface DraftAction {
+  key: string;
+  label: string;
+  status: DraftStatus;
+  icon: string;
+  variant: "primary" | "secondary" | "ghost";
+}
+
+export function draftActions(d: Draft, role: RoleId): DraftAction[] {
+  const mine = d.owner === ROLES[role].personId;
+  const manager = isManager(role);
+  const out: DraftAction[] = [];
+  const editing = d.status === "Draft" || d.status === "Changes requested";
+  if (editing && mine && !manager) out.push({ key: "submit", label: d.status === "Changes requested" ? "Send again for review" : "Send for approval", status: "In review", icon: "paper-plane-outline", variant: "primary" });
+  if (manager && d.status === "In review") {
+    out.push({ key: "approve", label: "Approve", status: "Approved", icon: "checkmark-done-outline", variant: "primary" });
+    out.push({ key: "changes", label: "Request changes", status: "Changes requested", icon: "return-up-back-outline", variant: "secondary" });
+  }
+  if (manager && editing) out.push({ key: "approve", label: d.cid ? "Approve & add to campaign" : "Approve", status: "Approved", icon: "checkmark-done-outline", variant: "primary" });
+  if (manager && d.status === "Approved") out.push({ key: "reopen", label: "Move back to draft", status: "Draft", icon: "arrow-undo-outline", variant: "ghost" });
+  return out;
+}
+
+export function draftNote(d: Draft, role: RoleId): string | null {
+  const mine = d.owner === ROLES[role].personId;
+  if (d.status === "In review" && !isManager(role)) return mine ? "Sent for approval — waiting for a Super Admin or Owner/Admin." : "Waiting for a manager to review.";
+  if (d.status === "Approved") return isManager(role) ? (d.cid ? "Approved. Saved to the campaign’s assets." : "Approved. Link a campaign to file it as an asset.") : "Approved — this draft is locked.";
+  if (!mine && !isManager(role)) return "Only the author or a manager can change this draft.";
+  return null;
+}
 
 export interface TaskAction {
   key: string;

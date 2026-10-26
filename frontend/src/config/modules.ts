@@ -29,5 +29,8 @@ export const DESTINATIONS: Record<string, Destination> = {
   task: { key: "task", title: "Task details", icon: "checkbox-outline", description: "Open the work, add comments and send it for approval.", phase: "Planned for a later phase" },
 };
 
+/** Destinations that have real screens. Everything else opens the placeholder. */
+const BUILT: Record<string, string> = { content: "/studio/content", ads: "/studio/ads" };
+
 export const destinationHref = (key: string, id?: string): Href =>
-  (id ? `/module/${key}?id=${id}` : `/module/${key}`) as Href;
+  (BUILT[key] ?? (id ? `/module/${key}?id=${id}` : `/module/${key}`)) as Href;

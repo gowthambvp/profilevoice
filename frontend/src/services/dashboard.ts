@@ -43,6 +43,12 @@ export function pendingApprovals(db: Db, role: RoleId): Task[] {
   return role === "editor" ? all.filter((t) => t.assignee === myId(role)) : all;
 }
 
+/** Submitted drafts with no linked task (linked ones are counted through their task). */
+export function pendingDraftApprovals(db: Db, role: RoleId) {
+  const all = db.drafts.filter((d) => d.status === "In review" && !d.taskId);
+  return role === "editor" ? all.filter((d) => d.owner === myId(role)) : role === "publisher" ? [] : all;
+}
+
 export function upcomingScheduled(db: Db, role: RoleId) {
   const ids = new Set(visibleCampaigns(db, role).map((c) => c.id));
   return db.scheduled
@@ -139,7 +145,7 @@ export function summaryCards(db: Db, role: RoleId): SummaryCard[] {
       key: "approvals",
       label: role === "editor" ? "Awaiting approval" : role === "publisher" ? "To review" : "Pending approvals",
       hint: role === "editor" ? "Your submissions" : "Waiting on a decision",
-      count: pendingApprovals(db, role).length,
+      count: pendingApprovals(db, role).length + pendingDraftApprovals(db, role).length,
       icon: "checkmark-done",
       target: "approvals",
     },
@@ -151,4 +157,11 @@ export function summaryCards(db: Db, role: RoleId): SummaryCard[] {
 
 export const actionsFor = (keys: string[]) => keys.map((k) => ACTIONS[k]).filter(Boolean);
 
-export const notificationCount = (db: Db, role: RoleId) => pendingApprovals(db, role).length + attentionTasks(db, role).length;
+export const notificationCount = (db: Db, role: RoleId) => pendingApprovals(db, role).length + pendingDraftApprovals(db, role).length + attentionTasks(db, role).length;
+
+/** Studio drafts: managers see everyone's, Creators see their own. */
+export function draftsFor(db: Db, role: RoleId, kind: "content" | "ad") {
+  return db.drafts
+    .filter((d) => d.kind === kind && (isManager(role) || d.owner === myId(role)))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}

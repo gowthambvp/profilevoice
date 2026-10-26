@@ -164,7 +164,7 @@ export default function CampaignDetail() {
                   </Text>
                   <Text style={styles.rowMeta}>
                     {a.kind[0].toUpperCase() + a.kind.slice(1)} · by {person(a.addedBy).name}
-                    {a.from ? " · from a task" : ""}
+                    {a.from ? (a.from.startsWith("d") ? " · from a draft" : " · from a task") : ""}
                   </Text>
                 </View>
               </View>

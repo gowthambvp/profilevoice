@@ -305,7 +305,7 @@ const useStyles = makeStyles((c) => ({
   chipTextOn: { color: c.onSurfaceInverse },
   chipHint: { fontSize: fontSize.sm, color: c.muted },
   seg: { flexDirection: "row", backgroundColor: c.neutralSoft, borderRadius: radius.md, padding: 3 },
-  segItem: { height: 32, paddingHorizontal: spacing.md, borderRadius: radius.sm + 2, justifyContent: "center" },
+  segItem: { height: 38, paddingHorizontal: spacing.md, borderRadius: radius.sm + 2, justifyContent: "center" },
   segOn: { backgroundColor: c.surfaceSecondary, ...shadow1(c) },
   segText: { fontSize: fontSize.sm + 1, fontWeight: "600", color: c.muted },
   segTextOn: { color: c.onSurface },

@@ -1,0 +1,48 @@
+{
+  "summary": "Frontend-only retest of the iteration 4 Phase 3 Studio fixes, run in the Expo web preview at 375x667 with Playwright. All three main fixes work. FIX 1: a Creator post linked to campaign c1 with no linked task, once submitted, raised the manager approvals count from 3 to 4 and the notifications badge from 11 to 12. It shows up as approval-draft-row-<id>, opens the editor, and approving it removes it from the list. FIX 2: approving d1 set t9 to Approved and added an asset to c1. 'Move back to draft' then set t9 to In progress and removed that asset. FIX 3: 24 image-ad generations (8 tones x 3 variations, long topic and keywords) all stayed within 40/125 characters with no mid-word cuts. The low-priority fixes work: post titles vary (3 distinct), the LinkedIn body adds a call to comment, approved unlinked drafts show '· from a draft', Preview opens at the top, a draft started from t11 has an empty topic with t11 preselected, a cleared title and body blocks submit with an error, and the Write/Preview control is 38px tall. Regression checks pass: create, save, delete (with confirm), discard dialog, copy toast, Creator submit locks the editor, Publisher sees the no-access screen, and all 8 preview types render with no console errors. One new edge-case bug: deleting a task while its linked draft is In review drops the draft from approvals. No deprecated Expo packages were found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Editor title/body error when sending a cleared draft", "issue": "The error is set and the editor switches to Write, but the screen stays at the top. The error under the Title field is far below the Generate card, so the user sees nothing happen: no toast and no scroll to the error.", "testID": "editor-title-input-error", "priority": "low"}
+    ],
+    "integration_issues": [
+      {"flow": "Delete a task that has a linked In review draft", "issue": "Repro: the Creator submits d1 (t9 goes In review), then Super Admin deletes t9. The approvals count drops from 4 to 3 and d1 is missing from the Approvals module, but d1 is still 'In review' in the studio. Cause: deleteTask (DataStore.tsx:220) does not clear drafts[].taskId, and pendingDraftApprovals (dashboard.ts:48) skips any draft that has a taskId. deleteCampaign also leaves a stale draft cid.", "affected_testIDs": ["summary-count-approvals", "notifications-badge", "approval-draft-row-d1"]}
+    ],
+    "design_issues": [
+      {"screen": "Generated copy (generator.ts)", "issues": [
+        "Wrong article: 'with a easy/everyday/uncompromising/exquisite touch' should use 'an'.",
+        "Doubled word: 'with a a little bit magic touch' (Playful tone).",
+        "Awkward phrases: 'with a worth every rupee touch', 'Worth every rupee care, naturally', 'A little bit magic care, naturally'.",
+        "When the topic is long, the ad headline and primary text drop the topic entirely and always fall back to '<Adj> care, naturally'.",
+        "Ad script hook `${open} ${t}?` reads oddly, e.g. 'Made with care: the Herbal Care festive range?'.",
+        "Post title variant `${cap(a)} ${t}` reads as a verb, e.g. 'Soothing the Herbal Care festive range'.",
+        "The X post body only differs from Instagram when it is over 220 characters; short X posts are identical to Instagram."
+      ]},
+      {"screen": "Approvals module", "issues": [
+        "Draft rows show no time, unlike task rows (which show e.g. 'Today, 10:12').",
+        "The card still says 'Planned for a later phase · preview only' even though draft approvals now work from here."
+      ]},
+      {"screen": "Studio editor", "issues": ["The Write/Preview control is 38px tall, still under the 44pt touch target (accepted as intentional by the main agent)."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/ui/studio_flows.py", "/app/tests/ui/helpers.py"],
+  "action_items": [
+    "In deleteTask (DataStore.tsx:220), set taskId: null on drafts linked to the deleted task so they still count in approvals. Alternatively, have pendingDraftApprovals treat a draft whose task no longer exists as unlinked. Consider clearing a draft's cid in deleteCampaign too.",
+    "When submit or approve is blocked because the draft is empty, scroll to the Title field or show a toast so the error is visible.",
+    "Fix the grammar in generator.ts: a/an before adjectives, the doubled 'a a', and awkward adjectives inside 'with a ___ touch' and '___ care, naturally'.",
+    "Optional: show a time on draft rows in the Approvals module, and update the 'preview only' text there."
+  ],
+  "critical_code_review_comments": [
+    "pendingApprovals (tasks) does not filter for the publisher role, but pendingDraftApprovals returns [] for publisher. Neither filters by visibleCampaigns, so drafts or tasks in private campaigns could count for managers who cannot see those campaigns.",
+    "editor.tsx uses the same testID 'editor-title-input' on the Field (only for the '-error' suffix) and on the TextField. It works, but is easy to confuse.",
+    "A linked draft that is approved adds its asset through applyTaskStatus, so the asset is named after the task and labelled '· from a task', not '· from a draft'. This is consistent but may be unexpected."
+  ],
+  "updated_files": ["/app/tests/ui/studio_flows.py"],
+  "success_rate": {"backend": "N/A (frontend-only, no backend)", "frontend": "100% of requested fixes verified (3/3 main + 7/7 low); 1 new edge-case bug found"},
+  "seed_data_creation": "None. Data is in memory and resets on reload.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Load the helpers with exec(open('/app/tests/ui/helpers.py').read(), globals()). The seed has 3 manager approvals and a notifications badge of 11. Quick-action testIDs: quick-action-content and quick-action-ads. Studio new-draft testIDs: studio-new-blog|web|article|product|post and studio-new-imagead|videoad|adscript. Chip testIDs: editor-campaign-<cid|none>, editor-task-<tid|none>, editor-tone-<Tone>, editor-channel-<id>. Inputs are input/textarea[data-testid=editor-title-input|editor-body-input]. The helper tab() fails on the Approvals module screen because it has no header-back-button; use page.go_back() there. Dialog buttons are <dialog-testid>-confirm and <dialog-testid>-cancel.",
+  "rca_of_issue": "Orphaned In review draft: deleteTask removes the task but leaves the draft's taskId set. pendingApprovals only counts existing tasks, and pendingDraftApprovals only counts drafts with no taskId, so the draft is counted by neither. Fix: clear draft.taskId on task delete, or check that the task still exists in pendingDraftApprovals."
+}

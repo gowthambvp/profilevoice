@@ -104,6 +104,40 @@ export interface ActivityItem {
   roles: RoleId[];
 }
 
+export type DraftStatus = "Draft" | "In review" | "Changes requested" | "Approved";
+export type ContentType = "blog" | "web" | "article" | "product" | "post";
+export type AdType = "imagead" | "videoad" | "adscript";
+
+/** A Content Studio or Ad Studio draft. */
+export interface Draft {
+  id: string;
+  kind: "content" | "ad";
+  type: ContentType | AdType;
+  /** Title for content, headline for ads */
+  title: string;
+  /** Body copy, primary text, storyboard or script */
+  body: string;
+  cta: string;
+  tone: string;
+  voiceId: string;
+  length: "Short" | "Medium" | "Long";
+  channel: string;
+  ratio: string;
+  platform: string;
+  duration: string;
+  topic: string;
+  keywords: string;
+  cid: string | null;
+  taskId: string | null;
+  owner: string;
+  status: DraftStatus;
+  updatedAt: number;
+  /** template variation index used by the local generator */
+  variant: number;
+}
+
+export type DraftInput = Omit<Draft, "id" | "owner" | "status" | "updatedAt">;
+
 export interface Channel {
   id: string;
   label: string;

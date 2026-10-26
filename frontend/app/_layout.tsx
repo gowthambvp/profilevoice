@@ -34,6 +34,8 @@ export default function RootLayout() {
                 <Stack.Screen name="task/[id]" options={{ animation: "slide_from_right" }} />
                 <Stack.Screen name="campaign/edit" options={{ animation: "slide_from_bottom" }} />
                 <Stack.Screen name="task/edit" options={{ animation: "slide_from_bottom" }} />
+                <Stack.Screen name="studio/[kind]" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="studio/editor" options={{ animation: "slide_from_bottom" }} />
                 <Stack.Screen name="create-menu" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
                 <Stack.Screen name="role-switcher" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
               </Stack>

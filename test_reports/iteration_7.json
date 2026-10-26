@@ -1,0 +1,29 @@
+{
+  "summary": "Frontend-only retest of the iteration 6 deleteCampaign fix in the Expo web preview at 375x667, across 4 Playwright sessions. The fix works. The Creator submitted d1 (approvals went from 3 to 4), then Super Admin deleted c1 ('and its 8 tasks'). Approvals dropped to 3, as expected: t1 and t9 went with c1, and d1 is now unlinked. The Approvals module lists approval-draft-row-d1 ('Content Studio draft · from Dev R. · Recently'), t7 and t21. The studio list shows d1 as 'Blog post · No campaign · Dev R. · In review', and the editor campaign picker no longer offers c1. The manager opened d1 and approved it: status became Approved and approvals dropped to 2. Regression passes: new blog -> generate -> save (Draft, 'Draft saved' toast) -> Preview renders -> Copy (toast) -> delete with confirm (row removed). studio_flow (Creator submit -> Super Admin approve) added a c1 asset (2 to 3, 'from a task'). unlinked_draft_approval_flow and delete_task_keeps_draft_approval pass. No page errors. No deprecated Expo packages were found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Editor approval note (roles.ts:156)", "issues": ["Managers see 'Approved. Saved to the campaign’s assets.' even when the approved draft has no campaign (cid null, e.g. after its campaign was deleted). No asset is created, so the copy is misleading. Low priority."]},
+      {"screen": "Approvals module", "issues": ["The card still says 'Planned for a later phase · preview only' even though approvals work from it (carried over from iteration 6)."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/ui/studio_flows.py", "/app/tests/ui/helpers.py"],
+  "action_items": [
+    "Optional: in roles.ts:156, when d.cid is null, show something like 'Approved. This draft is now locked.' instead of 'Saved to the campaign’s assets.'",
+    "Optional (carried over): update the Approvals 'preview only' text, use a warning icon for error toasts, and remove the double ':'/'—' in generator copy."
+  ],
+  "critical_code_review_comments": [
+    "deleteCampaign only unlinks drafts whose cid matches the deleted campaign. A draft with cid X but a taskId from a task in a different deleted campaign would keep a stale taskId. The UI probably can't produce that state, but mapping taskId against the deleted task ids would be more robust.",
+    "Carried over: pendingApprovals is not filtered by visibleCampaigns or the publisher role."
+  ],
+  "updated_files": ["/app/tests/ui/studio_flows.py"],
+  "success_rate": {"backend": "N/A (frontend-only demo)", "frontend": "100% (fix and all regression checks pass)"},
+  "seed_data_creation": "None. Data is in-memory and each session starts fresh.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Load the helpers with exec(open('/app/tests/ui/helpers.py').read(), globals()) and exec(open('/app/tests/ui/studio_flows.py').read(), globals()). The flows are studio_flow, unlinked_draft_approval_flow, delete_task_keeps_draft_approval and delete_campaign_keeps_draft_approval. Run each in a fresh session (page.goto resets the data). Seed: approvals = 3 (t1/c1, t7/c3, t21/c4), c1 has 2 assets and 8 tasks. Open a campaign from the Campaigns tab with '[data-testid=\"campaigns-screen\"] [data-testid=\"campaign-row-c1\"]'.",
+  "rca_of_issue": "Iteration 6 bug fixed. deleteCampaign (DataStore.tsx:142) now sets cid: null and taskId: null on the campaign's drafts, so pendingDraftApprovals counts them as unlinked."
+}

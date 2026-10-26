@@ -46,6 +46,9 @@ export default function TaskDetail() {
   const note = waitingNote(t, role);
   const due = isOpen(t) ? dueLabel(t.due) : { text: "Done", tone: "success" as const };
 
+  const studioKind = t.module === "Content" ? "content" : t.module === "Ad Studio" ? "ads" : null;
+  const linkedDraft = db.drafts.find((d) => d.taskId === t.id);
+
   const remove = () => {
     setConfirm(false);
     back();
@@ -109,6 +112,15 @@ export default function TaskDetail() {
               <Icon name="information-circle-outline" size={15} color={colors.muted} />
               <Text style={styles.noteText}>{note}</Text>
             </View>
+          ) : null}
+          {studioKind && can.useStudio(role) && (manage || t.assignee === ROLES[role].personId) ? (
+            <Button
+              testID="task-open-studio-button"
+              label={linkedDraft ? `Open draft in ${t.module === "Content" ? "Content Studio" : "Ad Studio"}` : `Start in ${t.module === "Content" ? "Content Studio" : "Ad Studio"}`}
+              icon={t.module === "Content" ? "document-text-outline" : "sparkles-outline"}
+              variant="secondary"
+              onPress={() => router.push((linkedDraft ? `/studio/editor?id=${linkedDraft.id}` : `/studio/editor?kind=${studioKind}&taskId=${t.id}&cid=${t.cid}`) as Href)}
+            />
           ) : null}
         </Card>
 

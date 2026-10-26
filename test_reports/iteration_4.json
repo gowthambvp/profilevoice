@@ -1,0 +1,42 @@
+{
+  "summary": "Phase 3 Content Studio + Ad Studio tested on the frontend only, using Playwright on the public Expo web preview at 375x667. Six sessions covered the Creator, Super Admin, Owner/Admin and Publisher roles. Every requested flow works: entry points (Home, Create menu, More), studio home (new-format cards, seed drafts, search, filters), editor chips (type, campaign, task, voice, tone, length, channel, platform, ratio, duration, CTA), generate and regenerate (variations differ), character counters, the save validation error, save/edit/unsaved flag/discard dialog, previews (article, post, ad with headline and CTA, empty), copy toasts, delete, and the role rules. Role rules checked: Creator sees only own drafts; submit locks the editor and moves linked t9 to In review; Super Admin approve sets t9 to Approved and adds a c1 asset; request changes lets the Creator resend; a manager can approve own draft with 'Approve & add to campaign' and the asset lands in c2; Publisher has no studio entries and /studio/content shows the no-access screen. Task cross-links work (t9 opens d1, t11 opens a new linked video ad). Activity and counts update, and exit returns to the splash screen. No page errors and no red screen. Found 2 medium logic gaps and several minor issues.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Campaign assets list", "issue": "Assets created from approved drafts that have no linked task are labelled '· from a task', because the label shows whenever a.from is set and a.from holds the draft id. Example: 'TEST SA own ad | Image · by Rohi M. · from a task'. Reference: app/campaign/[id].tsx:166", "testID": "campaign-assets-list", "priority": "low"},
+      {"component": "Ad generator truncation", "issue": "clip() cuts ad headlines at 40 characters and primary text at 125 in the middle of a word and adds an ellipsis, e.g. 'A little kindness, bottled: the Herbal…' and '...Made with love, for y…'. Generated copy should fit the limit without being cut off. Reference: src/services/generator.ts:11,99,128", "testID": "editor-title-input", "priority": "medium"},
+      {"component": "Social post generator", "issue": "Regenerating a social post never changes the title (1 unique title in 4 runs on every channel). The body has the same length on every channel, so the output does not seem to depend on the channel. Reference: src/services/generator.ts:58-61", "testID": "editor-generate-button", "priority": "low"},
+      {"component": "Editor Write/Preview toggle", "issue": "Switching to Preview keeps the Write tab's scroll offset, so the preview opens partway down the content instead of at the top.", "testID": "editor-mode-preview", "priority": "low"}
+    ],
+    "integration_issues": [
+      {"flow": "Unlinked draft approval visibility", "issue": "Drafts with no linked task that are sent for approval never reach the manager's pending approvals: the approvals count, the notification badge and the Approvals module all ignore them. pendingApprovals() only counts tasks. Repro: Creator submits a new Website copy draft with no task; the approvals count rises by 1 only for the linked d1. Managers can find such drafts only through the studio 'In review' filter. Reference: src/services/dashboard.ts:41-44", "affected_testIDs": ["summary-count-approvals", "notifications-badge", "draft-action-submit"]},
+      {"flow": "Reopening an approved linked draft", "issue": "When a manager uses 'Move back to draft' on an approved linked draft (d1), the draft returns to Draft but task t9 stays Approved and its campaign asset stays in place. The draft and task then disagree. DRAFT_TO_TASK has no mapping for Draft, so the task never changes. Reference: src/state/DataStore.tsx:67,192", "affected_testIDs": ["draft-action-reopen", "task-status"]}
+    ],
+    "design_issues": [
+      {"screen": "Studio home / Editor", "issues": ["studio-filter-* chips are 36px tall (should be at least 44)", "editor-mode-write and editor-mode-preview segments are 32px tall (should be at least 44)"]},
+      {"screen": "Editor (task-started draft)", "issues": ["The topic defaults to the task title, which produces awkward copy such as 'hands opening 15-second festive video ad, 9:16' (from t11)"]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/ui/helpers.py", "/app/tests/ui/studio_flows.py"],
+  "action_items": [
+    "Count In review drafts without a linked task in pendingApprovals, the notification count and the Approvals module, or block submitting drafts that have no task",
+    "When a linked approved draft is moved back to Draft, also move its task back (e.g. to In progress) and remove the asset that came from it, or hide the reopen action for linked drafts",
+    "In generator.ts, cut ad text at a word or sentence boundary, or build templates that fit the 40/125 limits so text is not cut mid-word",
+    "Vary social post titles across variations, and optionally make post bodies depend on the channel",
+    "Show '· from a draft' (or nothing) for assets that come from drafts, in campaign/[id].tsx",
+    "Raise studio filter chips and the Write/Preview segmented control to at least 44px tall",
+    "Scroll to the top when switching to Preview mode"
+  ],
+  "critical_code_review_comments": [
+    "editor.tsx act(): when the editor has unsaved edits, persist() runs without the empty title/body check, so a saved draft whose fields were cleared can still be submitted or approved empty",
+    "setDraftStatus with a linked task delegates to applyTaskStatus, so the asset name is the task title, not the draft title, and the activity log shows the task title",
+    "Files are well under 700 lines; testIDs are complete; Clipboard uses expo-clipboard; KeyboardProvider wraps the root; no deprecated expo packages found"
+  ],
+  "updated_files": ["/app/tests/ui/studio_flows.py"],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "~95% of requested checks passed; the failures are the 2 logic gaps and minor issues above"},
+  "seed_data_creation": "None (in-memory demo data)",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Load helpers with exec(open('/app/tests/ui/helpers.py').read(), globals()). The campaign-row-* testIDs are duplicated on Home (hidden), so scope campaign rows with [data-testid=\"campaigns-screen\"] when opening campaign detail. Toast testID is app-toast. To reach /studio/content as Publisher without a reload: history.pushState plus a popstate event. Creator role id is editor; Dev owns d1 and d2, Aisha owns d3."
+}

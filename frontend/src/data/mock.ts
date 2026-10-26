@@ -1,6 +1,6 @@
 // DEMO DATA — local only. Mirrors the ProfileVoice role-based workspace prototype.
 // Replace with API calls in src/services/* when the backend is ready.
-import type { ActivityItem, Campaign, Channel, Person, ScheduledPost, Task, Workspace } from "@/src/types";
+import type { ActivityItem, Campaign, Draft, Channel, Person, ScheduledPost, Task, Workspace } from "@/src/types";
 
 /** The prototype runs on a fixed "today" so dates and due-soon logic stay consistent. */
 export const DEMO_TODAY = "2026-09-24";
@@ -76,4 +76,26 @@ export const ACTIVITY: ActivityItem[] = [
   { id: "ac7", actor: "dev", action: "Updated a draft", detail: "Launch sub-brand voice", at: "Yesterday", roles: ["editor"] },
   { id: "ac8", actor: "nikhil", action: "Scheduled a post", detail: "Festive carousel — Instagram", at: "2 days ago", roles: [...MANAGERS, "publisher"] },
   { id: "ac9", actor: "rohi", action: "Invited a team member", detail: "Nikhil S. joined as Publisher", at: "3 days ago", roles: ["super_admin"] },
+];
+
+const draftBase = { cta: "", ratio: "1:1", platform: "Instagram Feed", duration: "15s", variant: 0 } as const;
+export const DRAFTS: Draft[] = [
+  {
+    ...draftBase, id: "d1", kind: "content", type: "blog", title: "Gift guide: 10 festive picks under ₹999",
+    body: "From our garden to your home: the festive gifting season is here.\n\nEvery pick in this guide is gentle, natural and wrapped with care — perfect for the people who matter most.\n\n## What makes it different\n- Natural ingredients\n- Under ₹999\n- Ready to gift\n\nCelebrate the season, naturally.",
+    tone: "Warm", voiceId: "hc-festive", length: "Medium", channel: "pinterest", topic: "festive gift picks under ₹999", keywords: "natural ingredients, under ₹999, ready to gift",
+    cid: "c1", taskId: "t9", owner: "dev", status: "Draft", updatedAt: 90,
+  },
+  {
+    ...draftBase, id: "d2", kind: "ad", type: "imagead", title: "Gentle care, festive glow", cta: "Shop now",
+    body: "From our garden to your home: the festive range — natural ingredients with a gentle touch. Made with love, for you and yours.",
+    tone: "Warm", voiceId: "hc-festive", length: "Short", channel: "instagram", topic: "the festive range", keywords: "natural ingredients, festive gifting",
+    cid: "c1", taskId: "t3", owner: "dev", status: "Draft", updatedAt: 89,
+  },
+  {
+    ...draftBase, id: "d3", kind: "content", type: "post", title: "Launch teaser — day 1",
+    body: "Psst — something new is growing at Herbal Care. Your shelf called. It wants this.\n\n#launchweek #naturalcare #comingsoon",
+    tone: "Playful", voiceId: "launch", length: "Short", channel: "instagram", topic: "launch week teaser", keywords: "launch week, natural care, coming soon",
+    cid: "c2", taskId: null, owner: "aisha", status: "Approved", updatedAt: 88,
+  },
 ];

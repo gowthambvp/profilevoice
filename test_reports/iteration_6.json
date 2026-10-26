@@ -1,0 +1,36 @@
+{
+  "summary": "Frontend-only retest of the iteration 5 fixes, run in the Expo web preview at 375x667 with Playwright across 7 sessions. All requested fixes work. (1) Delete-task fix: the Creator submitted d1 (approvals went from 3 to 4), then Super Admin deleted t9. The count stayed at 4, approval-draft-row-d1 still appears in the Approvals module with '· Recently', and opening and approving it works (it then leaves the list). (2) Blocked empty submit: from Preview mode, a cleared d1 shows the toast 'Add a title or body first', switches to the Write tab, shows the field error, and stays in Draft. (3) Copy grammar: 72 generations (image ad, ad script and product description x 8 tones x 3 variations) had no 'a' before a vowel, no 'a a', no 'rupee' or 'magic care' phrasing, and no '<Opener>: <topic>?' hooks. (4) Regression passes: generate (toast), save (Draft, toast), Preview renders, copy (toast), delete with confirm; Creator submit locks the editor; Owner/Admin approval sets d1 to Approved and t9 to Approved, adds an asset to c1 (2 to 3) and drops approvals from 4 to 3; Publisher gets no-access on /studio/content and /studio/editor and has no studio entry points. No page errors. One remaining edge-case bug, same type as last time: deleting campaign c1 while d1 is In review drops d1 from approvals. No deprecated Expo packages were found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Delete a campaign whose task has a linked In review draft", "issue": "Repro: the Creator submits d1 (approvals = 4), then Super Admin deletes campaign c1. Approvals goes to 2, but 3 was expected, because only the c1 task 'Gift guide article: 10 picks' should drop. d1 is still 'In review' in the studio but no longer appears in approvals. Cause: deleteCampaign (DataStore.tsx:133-144) removes the campaign's tasks but does not clear drafts[].taskId or cid, and pendingDraftApprovals (dashboard.ts:48) skips any draft that has a taskId.", "affected_testIDs": ["summary-count-approvals", "approval-draft-row-d1", "notifications-badge"]}
+    ],
+    "design_issues": [
+      {"screen": "Generated copy (generator.ts)", "issues": [
+        "Double punctuation when the tone opener ends with ':' or '—'. Product: 'Crafted for those who notice: the Herbal Care festive range: a luxurious essential…' (also Warm 'Made with care: … : a gentle essential'). Image ad: 'Psst — the Herbal Care festive range — natural ingredients…'.",
+        "'an easy essential for natural ingredients' and 'Each detail is proven' read a little oddly. Low priority."
+      ]},
+      {"screen": "Approvals module", "issues": ["The card still says 'Planned for a later phase · preview only' even though draft approvals work from here."]},
+      {"screen": "Toast", "issues": ["The error toast 'Add a title or body first' uses the same checkmark (success) icon as success toasts. Consider a warning icon."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/ui/studio_flows.py", "/app/tests/ui/helpers.py"],
+  "action_items": [
+    "In deleteCampaign (DataStore.tsx:133), also map drafts so that any draft whose taskId belongs to a deleted task, or whose cid === id, gets taskId: null (and cid: null). Alternatively, make pendingDraftApprovals treat a draft as unlinked when its task no longer exists.",
+    "Optional copy polish: avoid a double ':' or '—' when the tone opener already ends in ':' or '—' (product line 73 and image ad base line 138 in generator.ts).",
+    "Optional: update the Approvals 'preview only' text, and use a warning icon for error toasts."
+  ],
+  "critical_code_review_comments": [
+    "pendingApprovals (tasks) is not filtered for the publisher role: Publisher Home shows '3 To review'. pendingDraftApprovals returns [] for publisher, so the two are inconsistent.",
+    "Neither approvals function filters by visibleCampaigns, so items from private campaigns could count for managers who cannot see those campaigns."
+  ],
+  "updated_files": ["/app/tests/ui/studio_flows.py"],
+  "success_rate": {"backend": "N/A (frontend-only demo)", "frontend": "100% of requested fixes and regression checks; 1 new related edge-case bug (deleteCampaign)"},
+  "seed_data_creation": "None. Data is in-memory and each session starts fresh.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Role ids: super_admin, admin (Owner/Admin), editor (Creator), publisher. Exec helpers with exec(open('/app/tests/ui/helpers.py').read(), globals()). A draft linked to a task shows in Approvals as approval-row-<taskId>; an unlinked draft shows as approval-draft-row-<id>. The Approvals module uses placeholder-back-button, so helpers.tab() cannot back out of it. To reach a route without reloading: history.pushState plus a popstate event. Seed state: approvals = 3, c1 has 2 assets.",
+  "rca_of_issue": "deleteTask now nulls drafts' taskId (fixed). deleteCampaign removes tasks with cid === id but has no equivalent drafts mapping, so a draft linked to one of those tasks keeps a dangling taskId and is filtered out by pendingDraftApprovals (!d.taskId)."
+}

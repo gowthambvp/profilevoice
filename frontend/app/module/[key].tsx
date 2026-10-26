@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Card, ChannelDots, EmptyState, Icon, Pill, PressableScale, SectionHeader } from "@/src/components/ui";
 import { DESTINATIONS } from "@/src/config/modules";
 import { moduleLabel } from "@/src/config/roles";
-import { format12, formatDate, pendingApprovals, person, upcomingScheduled } from "@/src/services/dashboard";
+import { format12, formatDate, pendingApprovals, pendingDraftApprovals, person, upcomingScheduled } from "@/src/services/dashboard";
 import { useDb } from "@/src/state/DataStore";
 import { useDemo } from "@/src/state/DemoContext";
 import { fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -28,6 +28,7 @@ export default function ModulePlaceholder() {
   const back = () => (router.canGoBack() ? router.back() : router.replace("/home"));
 
   const approvals = key === "approvals" ? pendingApprovals(db, role) : [];
+  const draftApprovals = key === "approvals" ? pendingDraftApprovals(db, role) : [];
   const scheduled = key === "publish" ? upcomingScheduled(db, role) : [];
 
   return (
@@ -61,8 +62,20 @@ export default function ModulePlaceholder() {
           <>
             <SectionHeader title={role === "editor" ? "Your work awaiting approval" : "Waiting on a decision"} />
             <Card testID="approvals-preview">
-              {approvals.length ? (
-                approvals.map((a, i) => (
+              {approvals.length || draftApprovals.length ? (
+                <>
+                {draftApprovals.map((d) => (
+                  <PressableScale key={d.id} testID={`approval-draft-row-${d.id}`} onPress={() => router.push(`/studio/editor?id=${d.id}` as Href)} style={[styles.row, styles.divider]} scaleTo={0.985}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.rowTitle}>{d.title || "Untitled draft"}</Text>
+                      <Text style={styles.rowMeta}>
+                        {d.kind === "ad" ? "Ad Studio" : "Content Studio"} draft · from {person(d.owner).name} · Recently
+                      </Text>
+                    </View>
+                    <Pill label="Pending" tone="warning" />
+                  </PressableScale>
+                ))}
+                {approvals.map((a, i) => (
                   <PressableScale key={a.id} testID={`approval-row-${a.id}`} onPress={() => router.push(`/task/${a.id}` as Href)} style={[styles.row, i < approvals.length - 1 && styles.divider]} scaleTo={0.985}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.rowTitle}>{a.title}</Text>
@@ -72,7 +85,8 @@ export default function ModulePlaceholder() {
                     </View>
                     <Pill label="Pending" tone="warning" />
                   </PressableScale>
-                ))
+                ))}
+                </>
               ) : (
                 <EmptyState icon="checkmark-done-outline" title="Nothing to review" message="New submissions will show up here." />
               )}
