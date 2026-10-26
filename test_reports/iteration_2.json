@@ -1,0 +1,42 @@
+{
+  "summary": "Phase 2 (Campaigns + Tasks) frontend-only testing on Expo web at 390x844 + 320x640 spot checks, across Super Admin, Owner/Admin, Creator and Publisher. Phase 1 regressions pass: exit demo goes back to the splash with no loop, reloading /tasks without a role shows the splash, and reset restores 3/15/3/5. Campaigns pass: search, 5 status chips with counts (All 9/Active 3/Scheduled 3/Draft 2/Completed 1), detail sections, create (name + end-before-start validation), edit, delete (campaign tasks removed, counts update 3/15/3/5 -> 2/8/2/3), and Add task preselecting the campaign. Tasks pass: search by title and campaign name, scope All/Mine/Team, 3-way sort cycle, 9 filter chips, due-date group headers, priority pills, create (validation)/edit/status chips/delete, and all workflow actions (start, submit, resubmit, approve with asset added, request changes, ready, publish, complete, reopen). Due-date permissions are correct per role. Cross-screen counts, attention card and 'Just now' activity update, and role-specific views work. 0 page errors. Found 3 minor logic/UX issues, 1 deprecation warning and 1 touch-target issue.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Task edit form status change", "issue": "Changing a status through task-status-option-* in /task/edit goes through updateTask(), not setTaskStatus(). Result: setting it to Approved or Completed does NOT add the asset to the campaign (verified: t7 set to Approved via the form left c3 'No assets yet'). Setting In review does not set submittedAt. The activity entry is the generic 'Updated a task' instead of the status action. Reference: /app/frontend/src/state/DataStore.tsx:128-140, /app/frontend/app/task/edit.tsx:50", "testID": "task-status-option-Approved", "priority": "MEDIUM"},
+      {"component": "Campaign delete back-navigation", "issue": "Path: task detail -> task-campaign-link -> campaign-delete-button -> confirm. The back() call lands on /task/<id> for a task that was just deleted along with its campaign, so the user sees the 'Task not found' screen. Reference: /app/frontend/app/campaign/[id].tsx:51-54", "testID": "delete-campaign-dialog-confirm", "priority": "LOW"},
+      {"component": "Approved treated as closed", "issue": "isOpen() treats 'Approved' as CLOSED. An approved task still has a next step ('Mark ready to publish'), but it drops out of Pending tasks/Open (Admin pending went 15 -> 14 after approving t1), shows under the Done filter, and its due pill shows 'Done'. Please confirm this is intended. Reference: /app/frontend/src/services/dashboard.ts:11-12", "testID": "filter-chip-done", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Forms (campaign/task)", "issues": ["Chip options (task-priority-option-*, task-campaign-option-*, campaign-channel-option-*, etc.) are 36px tall, below the 44px minimum touch target. Reference: /app/frontend/src/components/form.tsx ChipGroup styles.chip"]},
+      {"screen": "Stack screens (task/campaign detail)", "issues": ["The toast ('Status: In review', 'Campaign created') sits over the header title for about 2s and partly covers the header area."]},
+      {"screen": "Tasks/Campaigns search", "issues": ["On web, the focused TextInput draws a square browser focus outline inset inside the rounded search field (missing outlineStyle:'none' on web)."]}
+    ],
+    "react_native_issues": [
+      {"component": "expo-router/unstable-native-tabs", "issue": "Deprecated import. The runtime warning says to use 'expo-router/native-tabs' instead. Reference: /app/frontend/app/(tabs)/_layout.tsx:2"}
+    ]
+  },
+  "test_report_links": ["/app/tests/ui/helpers.py", ".screenshots/c1_detail.png", ".screenshots/new_detail.png", ".screenshots/tasks.png", ".screenshots/after_del.png", ".screenshots/taskform_320.png", ".screenshots/c320.png", ".screenshots/c1_320.png"],
+  "action_items": [
+    "Send task status changes from the edit form through the same logic as setTaskStatus (asset creation, submittedAt, status-specific activity text). One option: when patch.status differs, call the status logic inside updateTask.",
+    "On campaign delete, navigate to /campaigns (router.dismissTo or replace) instead of back(), so the user is not left on a deleted task's detail screen.",
+    "Confirm whether 'Approved' should count as open/pending, since it still needs 'Mark ready to publish'.",
+    "Change the import to 'expo-router/native-tabs' (deprecation warning).",
+    "Raise ChipGroup chip minHeight to 44 for touch targets.",
+    "Optional: add outlineStyle 'none' (web) on the SearchBar TextInput; move the toast below the header on stack screens."
+  ],
+  "critical_code_review_comments": [
+    "DataStore.updateTask and setTaskStatus duplicate the task lookup, update and activity logic, and the asset-on-approve rule exists only in setTaskStatus (root cause of the form-status bug).",
+    "pendingApprovals() reads db.tasks directly without filtering by visibleCampaigns. This is harmless today, but it is inconsistent with roleTasks() and could count tasks from private campaigns the user cannot see.",
+    "visibleCampaigns() gives Publishers every private campaign. Verify this matches the web workspace rules.",
+    "Task creation accepts a due date in the past (it shows 'Overdue 2d' right away). Consider a warning."
+  ],
+  "updated_files": ["/app/tests/ui/helpers.py (new test helper only; no app code changed)"],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "~95% (all requested flows pass; 3 minor logic/UX issues)"},
+  "seed_data_creation": "None. All data is in-memory mock data and resets on reload.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use /app/tests/ui/helpers.py patterns. Never page.goto() mid-flow: a reload resets the in-memory data and the role. To open /campaign/edit as a Creator without a reload, use history.pushState + a PopStateEvent; no-access-screen then shows correctly. Stack screens hide the tab bar, so tap header-back-button before tab-* clicks. The campaign form preselects Instagram and the current user, so clicking those chips de-selects them. Seed counts: SA/Admin 3/15/3/5; Creator 3 campaigns (8 in workspace)/10 tasks/3 awaiting; Publisher tasks t6,t4,t23,t26 and To review 3. Task chips: Open 15, Overdue 1, Upcoming 8, To do 6, In progress 2, In review 3, Changes 1, Ready 3, Done 1. Reset has no confirm dialog. Act on the first visible element, because tabs stay mounted.",
+  "rca_of_issue": "Form status bug: task/edit.tsx save() calls updateTask(id, {..., status}), and DataStore.updateTask only merges fields. The asset/submittedAt/STATUS_ACTION handling lives only in setTaskStatus. Repro: Admin -> Tasks -> t7 -> Edit -> status Approved -> Save -> open the campaign; Assets stays empty."
+}

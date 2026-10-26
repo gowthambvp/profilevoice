@@ -1,60 +1,100 @@
-// Mock data service. Every count on the dashboard is derived here from the mock data.
-// Swap these selectors for API calls in a later phase; screens won't need to change.
+// Read-side selectors over the local data store. Every count on every screen is derived here.
 import { ACTIONS, ROLES, isManager, type DashboardCardKey } from "@/src/config/roles";
-import { ACTIVITY, APPROVALS, CAMPAIGNS, DEMO_TODAY, PEOPLE, SCHEDULED, TASKS } from "@/src/data/mock";
-import type { Campaign, RoleId, Task } from "@/src/types";
+import { DEMO_TODAY, PEOPLE } from "@/src/data/mock";
+import type { Db } from "@/src/state/DataStore";
+import type { Campaign, Priority, RoleId, Task } from "@/src/types";
 
-const CLOSED: Task["status"][] = ["Completed", "Approved"];
-const daysBetween = (a: string, b: string) => Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
+// Approved work still has to be scheduled and published, so only Completed is closed.
+const CLOSED: Task["status"][] = ["Completed"];
+const DONE_FOR_PROGRESS: Task["status"][] = ["Completed", "Approved", "Ready to publish"];
+
+export const daysFromToday = (iso: string) =>
+  Math.round((new Date(`${iso}T00:00:00`).getTime() - new Date(`${DEMO_TODAY}T00:00:00`).getTime()) / 86400000);
+export const isOpen = (t: Task) => !CLOSED.includes(t.status);
+export const isOverdue = (t: Task) => isOpen(t) && daysFromToday(t.due) < 0;
+export const isUpcoming = (t: Task) => isOpen(t) && daysFromToday(t.due) >= 0 && daysFromToday(t.due) <= 7;
 
 export const person = (id: string) => PEOPLE[id] ?? { id, name: "Unassigned", initials: "?", role: "editor" as const };
-export const campaignById = (id: string | null) => CAMPAIGNS.find((c) => c.id === id);
+export const campaignById = (db: Db, id: string | null | undefined) => db.campaigns.find((c) => c.id === id);
+export const myId = (role: RoleId) => ROLES[role].personId;
 
-export function visibleCampaigns(role: RoleId): Campaign[] {
-  const me = ROLES[role].personId;
-  return CAMPAIGNS.filter((c) => isManager(role) || role === "publisher" || c.visibility !== "private" || c.members.includes(me));
+export function visibleCampaigns(db: Db, role: RoleId): Campaign[] {
+  const me = myId(role);
+  return db.campaigns.filter((c) => isManager(role) || role === "publisher" || c.visibility !== "private" || c.members.includes(me));
 }
 
-/** Tasks the role is responsible for: managers oversee all, others see their own. */
-export function roleTasks(role: RoleId): Task[] {
-  if (isManager(role)) return TASKS;
-  return TASKS.filter((t) => t.assignee === ROLES[role].personId);
+export type TaskScope = "mine" | "team" | "all";
+
+/** Managers can look at My / Team / All tasks; Creators and Publishers only see their own. */
+export function roleTasks(db: Db, role: RoleId, scope: TaskScope = "all"): Task[] {
+  const ids = new Set(visibleCampaigns(db, role).map((c) => c.id));
+  const visible = db.tasks.filter((t) => ids.has(t.cid));
+  const me = myId(role);
+  if (!isManager(role) || scope === "mine") return visible.filter((t) => t.assignee === me);
+  if (scope === "team") return visible.filter((t) => t.assignee !== me);
+  return visible;
 }
 
-export const openTasks = (role: RoleId) => roleTasks(role).filter((t) => !CLOSED.includes(t.status));
+export const openTasks = (db: Db, role: RoleId) => roleTasks(db, role).filter(isOpen);
 
-export function pendingApprovals(role: RoleId) {
-  const pending = APPROVALS.filter((a) => a.state === "pending");
-  if (role === "editor") return pending.filter((a) => a.from === ROLES.editor.personId);
-  return pending;
+/** Work waiting on a decision. Creators see their own submissions. */
+export function pendingApprovals(db: Db, role: RoleId): Task[] {
+  const all = db.tasks.filter((t) => t.status === "In review");
+  return role === "editor" ? all.filter((t) => t.assignee === myId(role)) : all;
 }
 
-export function upcomingScheduled(role: RoleId) {
-  const ids = new Set(visibleCampaigns(role).map((c) => c.id));
-  return SCHEDULED.filter((s) => s.state !== "Completed" && (!s.cid || ids.has(s.cid))).sort((a, b) =>
-    `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`),
-  );
+export function upcomingScheduled(db: Db, role: RoleId) {
+  const ids = new Set(visibleCampaigns(db, role).map((c) => c.id));
+  return db.scheduled
+    .filter((s) => s.state !== "Completed" && (!s.cid || ids.has(s.cid)))
+    .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
 }
 
-export const dueSoon = (role: RoleId) => openTasks(role).filter((t) => daysBetween(DEMO_TODAY, t.due) <= 3);
+export const dueSoon = (db: Db, role: RoleId) => openTasks(db, role).filter((t) => daysFromToday(t.due) <= 3);
 
-export function attentionTasks(role: RoleId): Task[] {
-  return openTasks(role)
-    .filter((t) => t.status === "Changes requested" || t.status === "Ready to publish" || daysBetween(DEMO_TODAY, t.due) <= 2)
+export function attentionTasks(db: Db, role: RoleId): Task[] {
+  return openTasks(db, role)
+    .filter((t) => t.status === "Changes requested" || t.status === "Ready to publish" || daysFromToday(t.due) <= 2)
     .sort((a, b) => a.due.localeCompare(b.due));
 }
 
-export function recentCampaigns(role: RoleId): Campaign[] {
+export function recentCampaigns(db: Db, role: RoleId): Campaign[] {
   const rank = { Active: 0, Scheduled: 1, Draft: 2, Completed: 3 } as const;
-  return visibleCampaigns(role)
+  return visibleCampaigns(db, role)
     .filter((c) => c.status !== "Completed")
     .sort((a, b) => rank[a.status] - rank[b.status]);
 }
 
-export const activityFor = (role: RoleId) => ACTIVITY.filter((a) => a.roles.includes(role));
+export const activityFor = (db: Db, role: RoleId) => db.activity.filter((a) => a.roles.includes(role));
+export const campaignTasks = (db: Db, cid: string) => db.tasks.filter((t) => t.cid === cid);
+
+export function campaignProgress(db: Db, cid: string) {
+  const tasks = campaignTasks(db, cid);
+  const done = tasks.filter((t) => DONE_FOR_PROGRESS.includes(t.status)).length;
+  return { done, total: tasks.length, pct: tasks.length ? Math.round((done / tasks.length) * 100) : 0 };
+}
+
+const PRIORITY_RANK: Record<Priority, number> = { High: 0, Medium: 1, Low: 2 };
+export type SortKey = "due" | "priority" | "recent";
+export function sortTasks(list: Task[], key: SortKey): Task[] {
+  const l = [...list];
+  if (key === "priority") return l.sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || a.due.localeCompare(b.due));
+  if (key === "recent") return l.sort((a, b) => b.updatedAt - a.updatedAt);
+  return l.sort((a, b) => a.due.localeCompare(b.due) || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);
+}
+
+export type Bucket = "Overdue" | "Due today" | "This week" | "Later" | "Done";
+export function dueBucket(t: Task): Bucket {
+  if (!isOpen(t)) return "Done";
+  const d = daysFromToday(t.due);
+  if (d < 0) return "Overdue";
+  if (d === 0) return "Due today";
+  if (d <= 7) return "This week";
+  return "Later";
+}
 
 export function dueLabel(due: string) {
-  const d = daysBetween(DEMO_TODAY, due);
+  const d = daysFromToday(due);
   if (d < 0) return { text: `Overdue ${-d}d`, tone: "error" as const };
   if (d === 0) return { text: "Due today", tone: "warning" as const };
   if (d === 1) return { text: "Due tomorrow", tone: "warning" as const };
@@ -80,17 +120,18 @@ export interface SummaryCard {
   target: "campaigns" | "tasks" | "approvals" | "publish";
 }
 
-export function summaryCards(role: RoleId): SummaryCard[] {
+export function summaryCards(db: Db, role: RoleId): SummaryCard[] {
   const manager = isManager(role);
-  const active = visibleCampaigns(role).filter((c) => c.status === "Active").length;
-  const sched = upcomingScheduled(role);
+  const visible = visibleCampaigns(db, role);
+  const sched = upcomingScheduled(db, role);
+  const overdue = openTasks(db, role).filter(isOverdue).length;
   const build: Record<DashboardCardKey, SummaryCard> = {
-    campaigns: { key: "campaigns", label: "Active campaigns", hint: `${visibleCampaigns(role).length} in workspace`, count: active, icon: "megaphone", target: "campaigns" },
+    campaigns: { key: "campaigns", label: "Active campaigns", hint: `${visible.length} in workspace`, count: visible.filter((c) => c.status === "Active").length, icon: "megaphone", target: "campaigns" },
     tasks: {
       key: "tasks",
       label: manager ? "Pending tasks" : role === "publisher" ? "Publishing tasks" : "My tasks",
-      hint: manager ? "Across the team" : "Assigned to you",
-      count: openTasks(role).length,
+      hint: overdue ? `${overdue} overdue` : manager ? "Across the team" : "Assigned to you",
+      count: openTasks(db, role).length,
       icon: "checkbox",
       target: "tasks",
     },
@@ -98,16 +139,16 @@ export function summaryCards(role: RoleId): SummaryCard[] {
       key: "approvals",
       label: role === "editor" ? "Awaiting approval" : role === "publisher" ? "To review" : "Pending approvals",
       hint: role === "editor" ? "Your submissions" : "Waiting on a decision",
-      count: pendingApprovals(role).length,
+      count: pendingApprovals(db, role).length,
       icon: "checkmark-done",
       target: "approvals",
     },
     scheduled: { key: "scheduled", label: "Scheduled posts", hint: sched[0] ? `Next: ${formatDate(sched[0].date)}` : "Nothing queued", count: sched.length, icon: "calendar", target: "publish" },
-    dueSoon: { key: "dueSoon", label: "Due this week", hint: "Next 3 days", count: dueSoon(role).length, icon: "time", target: "tasks" },
+    dueSoon: { key: "dueSoon", label: "Due this week", hint: "Overdue or next 3 days", count: dueSoon(db, role).length, icon: "time", target: "tasks" },
   };
   return ROLES[role].dashboardCards.map((k) => build[k]);
 }
 
 export const actionsFor = (keys: string[]) => keys.map((k) => ACTIONS[k]).filter(Boolean);
 
-export const notificationCount = (role: RoleId) => pendingApprovals(role).length + attentionTasks(role).length;
+export const notificationCount = (db: Db, role: RoleId) => pendingApprovals(db, role).length + attentionTasks(db, role).length;

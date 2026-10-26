@@ -1,15 +1,14 @@
 // Temporary destination for modules planned in later phases. Always offers a Back action.
-import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
+import { Redirect, useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { TaskRow } from "@/src/components/rows";
-import { Button, Card, ChannelDots, EmptyState, Icon, Pill, PressableScale, SectionHeader, statusTone } from "@/src/components/ui";
+import { Button, Card, ChannelDots, EmptyState, Icon, Pill, PressableScale, SectionHeader } from "@/src/components/ui";
 import { DESTINATIONS } from "@/src/config/modules";
 import { moduleLabel } from "@/src/config/roles";
-import { TASKS } from "@/src/data/mock";
-import { campaignById, format12, formatDate, pendingApprovals, person, upcomingScheduled } from "@/src/services/dashboard";
+import { format12, formatDate, pendingApprovals, person, upcomingScheduled } from "@/src/services/dashboard";
+import { useDb } from "@/src/state/DataStore";
 import { useDemo } from "@/src/state/DemoContext";
 import { fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import type { ModuleKey } from "@/src/types";
@@ -19,19 +18,17 @@ export default function ModulePlaceholder() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { key, id } = useLocalSearchParams<{ key: string; id?: string }>();
+  const { key } = useLocalSearchParams<{ key: string }>();
   const { role, config } = useDemo();
+  const { db } = useDb();
   if (!role) return <Redirect href="/" />;
 
   const dest = DESTINATIONS[key] ?? { key, title: "Coming soon", icon: "construct-outline", description: "This screen is planned for a later phase.", phase: "Planned for a later phase" };
   const title = key in DESTINATIONS && ["approvals", "publish"].includes(key) ? moduleLabel(key as ModuleKey, role) : dest.title;
   const back = () => (router.canGoBack() ? router.back() : router.replace("/home"));
 
-  const campaign = key === "campaign" ? campaignById(id ?? null) : undefined;
-  const task = key === "task" ? TASKS.find((t) => t.id === id) : undefined;
-  const approvals = key === "approvals" ? pendingApprovals(role) : [];
-  const scheduled = key === "publish" ? upcomingScheduled(role) : [];
-  const campaignTasks = campaign ? TASKS.filter((t) => t.cid === campaign.id) : [];
+  const approvals = key === "approvals" ? pendingApprovals(db, role) : [];
+  const scheduled = key === "publish" ? upcomingScheduled(db, role) : [];
 
   return (
     <View style={styles.root} testID={`placeholder-screen-${key}`}>
@@ -51,20 +48,8 @@ export default function ModulePlaceholder() {
             <View style={styles.heroIcon}>
               <Icon name={dest.icon} size={24} color={colors.onSurfaceInverse} />
             </View>
-            <Text style={styles.heroTitle}>{campaign?.name ?? task?.title ?? title}</Text>
-            <Text style={styles.heroDesc}>{campaign?.desc || task ? (campaign?.desc || `${task?.module} task · assigned to ${person(task?.assignee ?? "").name}`) : dest.description}</Text>
-            {campaign ? (
-              <View style={styles.inline}>
-                <Pill label={campaign.status} tone={statusTone(campaign.status)} />
-                <ChannelDots ids={campaign.channels} />
-              </View>
-            ) : null}
-            {task ? (
-              <View style={styles.inline}>
-                <Pill label={task.status} tone={statusTone(task.status)} />
-                <Pill label={`Due ${formatDate(task.due)}`} />
-              </View>
-            ) : null}
+            <Text style={styles.heroTitle}>{title}</Text>
+            <Text style={styles.heroDesc}>{dest.description}</Text>
             <View style={styles.phase} testID="placeholder-phase-note">
               <Icon name="construct-outline" size={12} color={colors.onBrandTertiary} />
               <Text style={styles.phaseText}>{dest.phase} · preview only</Text>
@@ -78,15 +63,15 @@ export default function ModulePlaceholder() {
             <Card testID="approvals-preview">
               {approvals.length ? (
                 approvals.map((a, i) => (
-                  <View key={a.id} style={[styles.row, i < approvals.length - 1 && styles.divider]}>
+                  <PressableScale key={a.id} testID={`approval-row-${a.id}`} onPress={() => router.push(`/task/${a.id}` as Href)} style={[styles.row, i < approvals.length - 1 && styles.divider]} scaleTo={0.985}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.rowTitle}>{a.title}</Text>
                       <Text style={styles.rowMeta}>
-                        {a.module} · from {person(a.from).name} · {a.sent}
+                        {a.module} · from {person(a.assignee).name} · {a.submittedAt ?? "Recently"}
                       </Text>
                     </View>
                     <Pill label="Pending" tone="warning" />
-                  </View>
+                  </PressableScale>
                 ))
               ) : (
                 <EmptyState icon="checkmark-done-outline" title="Nothing to review" message="New submissions will show up here." />
@@ -115,19 +100,6 @@ export default function ModulePlaceholder() {
                 ))
               ) : (
                 <EmptyState icon="calendar-outline" title="Queue is empty" message="Approved work scheduled to go live will appear here." />
-              )}
-            </Card>
-          </>
-        ) : null}
-
-        {campaign ? (
-          <>
-            <SectionHeader title={`Tasks in this campaign (${campaignTasks.length})`} />
-            <Card>
-              {campaignTasks.length ? (
-                campaignTasks.map((t, i) => <TaskRow key={t.id} task={t} showAssignee last={i === campaignTasks.length - 1} />)
-              ) : (
-                <EmptyState icon="file-tray-outline" title="No tasks yet" message="Tasks added to this campaign will show here." />
               )}
             </Card>
           </>

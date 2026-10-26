@@ -16,7 +16,9 @@ User choices: roles/terminology taken from the attached HTML; do NOT remember ro
 - Fixed exit-demo / reload loop (Home tab moved to /home); guarded modal routes
 - Reduced font scale and icon sizes app-wide
 
+- Phase 2 complete (Oct 2026): central DataStore (src/state/DataStore.tsx) with campaign/task CRUD, workflow status actions per role (taskActions in roles.ts), due-date changes, assets from approved work, activity log; campaign list/detail/edit, task list (My/Team/All, search, filters, sort, due grouping, priority)/detail/edit; reset demo data; testing iterations 2-3 passed
+
 ## Backlog
-- P0: Phase 2 (awaiting user approval)
+- P0: Phase 3 (awaiting user approval)
 - P1: Approvals, Schedule queue, Content Studio, Ad Studio real screens
 - P2: Backend API integration, real auth

@@ -8,6 +8,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/src/components/error-boundary";
 import { Toast } from "@/src/components/Toast";
 import { queryClient } from "@/src/query-client";
+import { DataProvider } from "@/src/state/DataStore";
 import { DemoProvider } from "@/src/state/DemoContext";
 import { useTheme } from "@/src/theme";
 
@@ -23,15 +24,21 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <KeyboardProvider>
             <DemoProvider>
+              <DataProvider>
               <StatusBar style="dark" />
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }}>
                 <Stack.Screen name="index" options={{ animation: "fade" }} />
                 <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
                 <Stack.Screen name="module/[key]" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="campaign/[id]" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="task/[id]" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="campaign/edit" options={{ animation: "slide_from_bottom" }} />
+                <Stack.Screen name="task/edit" options={{ animation: "slide_from_bottom" }} />
                 <Stack.Screen name="create-menu" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
                 <Stack.Screen name="role-switcher" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
               </Stack>
               <Toast />
+              </DataProvider>
             </DemoProvider>
           </KeyboardProvider>
         </QueryClientProvider>

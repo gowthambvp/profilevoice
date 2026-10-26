@@ -9,6 +9,7 @@ import { destinationHref } from "@/src/config/modules";
 import { MODULE_ICONS, moduleLabel } from "@/src/config/roles";
 import { WORKSPACE } from "@/src/data/mock";
 import { usesNativeTabs } from "@/src/navigation";
+import { useDb } from "@/src/state/DataStore";
 import { useActiveRole, useDemo } from "@/src/state/DemoContext";
 import { fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import type { ModuleKey } from "@/src/types";
@@ -21,7 +22,8 @@ export default function More() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { config, user, exitDemo } = useDemo();
+  const { config, user, exitDemo, showToast } = useDemo();
+  const { resetData } = useDb();
   const role = useActiveRole();
   const bottomChrome = usesNativeTabs ? insets.bottom : 0;
   const modules = config.nav.filter((k) => !IN_TABS.includes(k));
@@ -29,6 +31,7 @@ export default function More() {
   const leave = () => {
     router.replace("/");
     exitDemo();
+    resetData();
   };
 
   return (
@@ -77,6 +80,23 @@ export default function More() {
               </Text>
             </View>
             <Icon name="chevron-forward" size={14} color={colors.muted} />
+          </PressableScale>
+          <PressableScale
+            testID="reset-demo-data-button"
+            onPress={() => {
+              resetData();
+              showToast("Demo data reset");
+            }}
+            style={[styles.row, styles.divider]}
+            scaleTo={0.985}
+          >
+            <View style={styles.rowIcon}>
+              <Icon name="refresh-outline" size={15} color={colors.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Reset demo data</Text>
+              <Text style={styles.meta}>Undo every campaign and task change</Text>
+            </View>
           </PressableScale>
           <PressableScale testID="exit-demo-button" onPress={leave} style={styles.row} scaleTo={0.985}>
             <View style={styles.rowIcon}>

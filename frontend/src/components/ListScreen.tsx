@@ -21,6 +21,8 @@ export function ListScreen({
   onChip,
   children,
   testID,
+  headerExtra,
+  fab,
 }: {
   title: string;
   subtitle: string;
@@ -29,6 +31,8 @@ export function ListScreen({
   onChip: (k: string) => void;
   children: ReactNode;
   testID: string;
+  headerExtra?: ReactNode;
+  fab?: ReactNode;
 }) {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
@@ -40,6 +44,7 @@ export function ListScreen({
           {title}
         </Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
+        {headerExtra}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipContent}>
           {chips.map((c) => {
             const on = c.key === active;
@@ -53,9 +58,10 @@ export function ListScreen({
           })}
         </ScrollView>
       </View>
-      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: bottomChrome + spacing.xl }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: bottomChrome + spacing.xl + (fab ? 72 : 0) }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         {children}
       </ScrollView>
+      {fab}
     </View>
   );
 }

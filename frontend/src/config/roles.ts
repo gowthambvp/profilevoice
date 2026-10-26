@@ -4,7 +4,7 @@
 import type { Href } from "expo-router";
 
 import { destinationHref } from "@/src/config/modules";
-import type { ModuleKey, RoleId } from "@/src/types";
+import type { ModuleKey, RoleId, Task, TaskStatus } from "@/src/types";
 
 export type DashboardCardKey = "campaigns" | "tasks" | "approvals" | "scheduled" | "dueSoon";
 
@@ -42,7 +42,7 @@ export interface RoleConfig {
 export const ACTIONS: Record<string, ActionDef> = {
   content: { key: "content", label: "Content Studio", desc: "Write posts, articles and emails", icon: "document-text-outline", href: destinationHref("content") },
   ads: { key: "ads", label: "Ad Studio", desc: "Image & video ads", icon: "sparkles-outline", href: destinationHref("ads") },
-  newCampaign: { key: "newCampaign", label: "Create Campaign", desc: "Plan channels, dates & team", icon: "megaphone-outline", href: destinationHref("new-campaign") },
+  newCampaign: { key: "newCampaign", label: "Create Campaign", desc: "Plan channels, dates & team", icon: "megaphone-outline", href: "/campaign/edit" as Href },
   requestCampaign: { key: "requestCampaign", label: "Request Campaign", desc: "Ask a manager to approve it", icon: "paper-plane-outline", href: destinationHref("request-campaign") },
   approvals: { key: "approvals", label: "Review Approvals", desc: "Approve or request changes", icon: "checkmark-done-outline", href: destinationHref("approvals") },
   submissions: { key: "submissions", label: "My Submissions", desc: "Work waiting on approval", icon: "hourglass-outline", href: destinationHref("approvals") },
@@ -113,6 +113,71 @@ export const ROLES: Record<RoleId, RoleConfig> = {
 };
 
 export const isManager = (role: RoleId) => role === "super_admin" || role === "admin";
+
+/** Workflow rules from the web workspace: managers run campaigns and assign work,
+ * Creators work their assigned tasks and send them for approval,
+ * Owner/Admins and Publishers review, Publishers send approved work live. */
+export const can = {
+  manageCampaigns: (r: RoleId) => isManager(r),
+  manageTasks: (r: RoleId) => isManager(r),
+  review: (r: RoleId) => isManager(r) || r === "publisher",
+  changeDue: (r: RoleId, t: Task) => isManager(r) || (r === "publisher" && t.assignee === ROLES[r].personId),
+};
+
+export interface TaskAction {
+  key: string;
+  label: string;
+  status: TaskStatus;
+  icon: string;
+  variant: "primary" | "secondary" | "ghost";
+}
+
+export function taskActions(t: Task, role: RoleId): TaskAction[] {
+  const mine = t.assignee === ROLES[role].personId;
+  const manager = isManager(role);
+  const worker = manager || mine;
+  const out: TaskAction[] = [];
+  const add = (key: string, label: string, status: TaskStatus, icon: string, variant: TaskAction["variant"] = "secondary") =>
+    out.push({ key, label, status, icon, variant });
+
+  switch (t.status) {
+    case "To do":
+      if (worker) add("start", "Start working", "In progress", "play-outline", "primary");
+      break;
+    case "In progress":
+      if (worker && t.module === "Library") add("ready", "Mark ready to publish", "Ready to publish", "calendar-outline", "primary");
+      else if (worker) add("submit", "Send for approval", "In review", "paper-plane-outline", "primary");
+      break;
+    case "Changes requested":
+      if (worker) add("resubmit", "Send again for review", "In review", "refresh-outline", "primary");
+      break;
+    case "In review":
+      if (can.review(role) && (manager || !mine)) {
+        add("approve", "Approve", "Approved", "checkmark-done-outline", "primary");
+        add("changes", "Request changes", "Changes requested", "return-up-back-outline");
+      }
+      break;
+    case "Approved":
+      if (manager || role === "publisher") add("ready", "Mark ready to publish", "Ready to publish", "calendar-outline", "primary");
+      break;
+    case "Ready to publish":
+      if (manager || role === "publisher") add("publish", "Mark published", "Completed", "rocket-outline", "primary");
+      break;
+    case "Completed":
+      if (manager) add("reopen", "Reopen task", "To do", "arrow-undo-outline");
+      break;
+  }
+  if (manager && t.status !== "Completed" && !out.some((a) => a.status === "Completed")) add("complete", "Mark complete", "Completed", "checkmark-circle-outline", "ghost");
+  return out;
+}
+
+export function waitingNote(t: Task, role: RoleId): string | null {
+  const mine = t.assignee === ROLES[role].personId;
+  if (t.status === "In review" && mine && !isManager(role)) return "Sent for approval — waiting for an Owner/Admin or Publisher to review.";
+  if (t.status === "Completed") return "This task is complete.";
+  if (taskActions(t, role).length === 0) return "Only the assignee or a Super Admin / Owner/Admin can move this task.";
+  return null;
+}
 
 /** Module labels follow the web app's per-role naming. */
 export function moduleLabel(key: ModuleKey, role: RoleId): string {

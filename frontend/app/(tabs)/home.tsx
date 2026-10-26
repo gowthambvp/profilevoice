@@ -10,6 +10,7 @@ import { destinationHref } from "@/src/config/modules";
 import { DEMO_TODAY, WORKSPACE } from "@/src/data/mock";
 import { usesNativeTabs } from "@/src/navigation";
 import { actionsFor, activityFor, attentionTasks, formatDate, notificationCount, recentCampaigns, summaryCards, type SummaryCard } from "@/src/services/dashboard";
+import { useDb } from "@/src/state/DataStore";
 import { useActiveRole, useDemo } from "@/src/state/DemoContext";
 import { fontSize, makeStyles, radius, shadow1, spacing, useTheme } from "@/src/theme";
 
@@ -30,12 +31,13 @@ export default function Home() {
   const role = useActiveRole();
   const bottomChrome = usesNativeTabs ? insets.bottom : 0;
 
-  const cards = summaryCards(role);
+  const { db } = useDb();
+  const cards = summaryCards(db, role);
   const actions = actionsFor(config.quickActions);
-  const attention = attentionTasks(role).slice(0, 4);
-  const campaigns = recentCampaigns(role).slice(0, 3);
-  const activity = activityFor(role).slice(0, 5);
-  const notif = notificationCount(role);
+  const attention = attentionTasks(db, role).slice(0, 4);
+  const campaigns = recentCampaigns(db, role).slice(0, 3);
+  const activity = activityFor(db, role).slice(0, 5);
+  const notif = notificationCount(db, role);
   const compact = width < 360;
   const firstName = user.name.split(" ")[0];
 

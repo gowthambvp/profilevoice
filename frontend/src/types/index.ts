@@ -44,7 +44,19 @@ export interface Campaign {
   members: string[];
   team: string[];
   channels: string[];
+  assets: Asset[];
 }
+
+export interface Asset {
+  id: string;
+  name: string;
+  kind: "image" | "video" | "doc" | "post";
+  addedBy: string;
+  /** task id the asset came from */
+  from?: string;
+}
+
+export type Priority = "High" | "Medium" | "Low";
 
 export type TaskStatus =
   | "To do"
@@ -64,16 +76,12 @@ export interface Task {
   due: string;
   status: TaskStatus;
   channels: string[];
-}
-
-export interface Approval {
-  id: string;
-  title: string;
-  from: string;
-  taskId: string;
-  module: string;
-  sent: string;
-  state: "pending" | "approved" | "changes";
+  priority: Priority;
+  description: string;
+  /** ms timestamp for "recently updated" sorting */
+  updatedAt: number;
+  /** when it was last sent for approval */
+  submittedAt?: string;
 }
 
 export interface ScheduledPost {

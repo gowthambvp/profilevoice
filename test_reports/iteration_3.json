@@ -1,0 +1,29 @@
+{
+  "summary": "Frontend-only retest of the iteration_2 fixes on the Expo web preview (375x667, public URL). All 3 fixes pass. FIX 1: as Super Admin, changing t7 from 'In review' to 'Approved' in the edit form shows Approved. Campaign c3 gains asset '4 retargeting image variants (from a task)'. Progress shows 1/1 (100%). Home shows 'Rohi M. approved work', and Pending approvals goes from 3 to 2. FIX 2: deleting a campaign opened from a task lands on /campaigns (campaigns-screen and tab bar visible, no task-not-found or campaign-not-found). The 'Campaign deleted' toast shows, c3 is gone and Pending tasks goes from 15 to 14. FIX 3: the approved t7 stays under Open (Open 15) and is not under Done (Done still only t10); Pending tasks stays 15. Form chips are 44px tall. The search input has outline none. Tabs load on web after the switch to the expo-router/native-tabs import, with no page errors. Regression passes: create campaign, create task (SA pending 15->16, campaigns 3->4), creator start/submit (Awaiting approval 3->4), publisher publish of t6 (Ready->Completed, Publishing tasks 4->3), and exit demo returns to the splash screen. Deprecated packages detected: none. No SafeAreaView import from react-native.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Tasks / Campaigns tabs", "issues": ["The filter chips (filter-chip-*) are 36px tall, below the 44px touch target. Only the form ChipGroup chips were raised to 44."]},
+      {"screen": "Stack/tab screens", "issues": ["The app-toast still covers the screen header title (for example 'Campaigns' after a delete). Optional item carried over from iteration_2."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/ui/helpers.py"],
+  "action_items": [
+    "Minor: raise the filter chip minHeight to 44 on the Tasks and Campaigns filter rows.",
+    "Minor: if a task edit changes only the status, updateTask still logs an extra 'updated a task' activity next to 'approved work'. Skip that entry, or skip it when no non-status field changed (DataStore.tsx:137 / task/edit.tsx:53).",
+    "Optional: move the toast below the header."
+  ],
+  "critical_code_review_comments": [
+    "task/edit.tsx sends status changes through setTaskStatus after updateTask. Both use functional setDb, so the order is safe.",
+    "campaign/[id].tsx calls router.dismissTo('/campaigns') before deleteCampaign, which is correct."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "None. Data is in memory and resets on reload.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use the public URL from frontend/.env EXPO_PUBLIC_BACKEND_URL; localhost:3000 over https fails. Load the helpers with exec(open('/app/tests/ui/helpers.py').read(), globals()). Without globals() the functions are not defined. Role ids: super_admin, admin, editor, publisher. Task actions use task-action-{start|submit|approve|changes|ready|publish|complete|reopen}. Create campaign: tab-create-button -> create-option-newCampaign. After saving a task the URL is /task/<id>."
+}

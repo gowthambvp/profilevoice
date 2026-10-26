@@ -1,5 +1,5 @@
 import { Redirect, Tabs, useRouter } from "expo-router";
-import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/native-tabs";
 import { Platform, Text, View } from "react-native";
 
 import { Icon, PressableScale } from "@/src/components/ui";
