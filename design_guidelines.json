@@ -1,0 +1,142 @@
+{
+  "app_name": "ProfileVoice iOS App",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A highly polished, reliable, and smooth iOS-native workspace that focuses on clarity and touch-friendly actions over decorative noise.",
+  "color": {
+    "surface": "#F5F8F7",
+    "onSurface": "#0E1A19",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#0E1A19",
+    "surfaceTertiary": "#E7F2F1",
+    "onSurfaceTertiary": "#0E2E31",
+    "surfaceInverse": "#0E2E31",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#186368",
+    "onBrand": "#FFFFFF",
+    "brandPrimary": "#C05A2C",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#1D7A80",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#E7F2F1",
+    "onBrandTertiary": "#186368",
+    "success": "#257D5C",
+    "onSuccess": "#FFFFFF",
+    "warning": "#A94B22",
+    "onWarning": "#FFFFFF",
+    "error": "#BA1A1A",
+    "onError": "#FFFFFF",
+    "border": "#E3EAE8",
+    "borderStrong": "#1D7A80",
+    "divider": "#E3EAE8",
+    "muted": "#4A5A58"
+  },
+  "typography": {
+    "displayFontFamily": "System",
+    "textFontFamily": "System",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous iOS-native vertical spacing. Padding around cards should be distinct (md to lg) to create clear grouping. Touch targets must be at least 44x44pt.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": 1,
+  "navigation": "bottom_tabs",
+  "icon_set": "Ionicons",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use on the bottom tab bar",
+      "Use on the bottom sheet handle/header for the Create menu",
+      "Use on sticky headers if the content scrolls behind"
+    ],
+    "dont's": [
+      "Do not use on data cards, list items, or regular buttons to avoid visual clutter"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Splash",
+      "purpose": "Brand identity entry point showcasing the app's professional feel with a Demo Mode action.",
+      "states": {
+        "loading": "Centered brand-colored activity indicator.",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Full-bleed abstract background with a gradient scrim (top-down transparent to surfaceInverse). Logo/Brand name centered. At the bottom, a prominent 'Demo Mode' button (brandPrimary) and localized disclaimer text using muted colors on the dark scrim."
+    },
+    {
+      "name": "Dashboard (Home)",
+      "purpose": "A unified workspace summary showing active campaigns, tasks, and recent activity for quick decision making.",
+      "states": {
+        "loading": "Skeleton loaders for cards and list items.",
+        "empty": "Empty state illustration with a prompt to create the first campaign.",
+        "error": "Card displaying an error with a 'Retry' button."
+      },
+      "layout": "1. Top Header: Logo + Workspace selector on left, User Avatar + Notification icon on right. 2. Welcome Section: Personalized greeting. 3. Summary Cards: Horizontal scroll of compact status cards (Active Campaigns, Scheduled). 4. Urgent Action Section: Pending tasks & approvals in a vertical list. 5. Quick Actions: 2-column grid. 6. Recent Activity: Standard vertical feed. Uses surfaceSecondary for cards with shadow tier 1."
+    },
+    {
+      "name": "Tasks / Campaigns / More",
+      "purpose": "Placeholder screens for main bottom navigation tabs.",
+      "states": {
+        "loading": "Center spinner.",
+        "empty": "Illustration + standard empty text.",
+        "error": "Message + Retry."
+      },
+      "layout": "Standard iOS list views with large headers. 'More' tab will house the Dev-only role selector grid."
+    }
+  ],
+  "images": {
+    "splash_bg": {
+      "url": "https://images.unsplash.com/photo-1599422314077-f4dfdaa4cd09?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMHRlYWwlMjBhbmQlMjBvcmFuZ2UlMjBmbHVpZCUyMHBhdHRlcm58ZW58MHx8fHwxNzkyOTkyNDI4fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "abstract teal and orange fluid pattern"
+    },
+    "user_avatar": {
+      "url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc5Mjk5MjQyOHww&ixlib=rb-4.1.0&q=85",
+      "alt": "professional headshot portrait"
+    },
+    "empty_state": {
+      "url": "https://images.unsplash.com/photo-1587522384446-64daf3e2689a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwxfHxjbGVhbiUyMG1vZGVybiUyMG1pbmltYWwlMjB3b3Jrc3BhY2V8ZW58MHx8fHwxNzkyOTkyNDI4fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "clean modern minimal workspace"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Apply the exact hex codes provided by the user for brand identity. Do not introduce any unapproved purples or blues.",
+    "The bottom navigation MUST have a prominent, center-aligned 'Create' Floating Action Button (FAB) using 'brandPrimary' (#C05A2C).",
+    "Tapping the 'Create' FAB should trigger a Gorhom bottom sheet containing the options: Content Studio, Ad Studio, and Create Campaign. Do not navigate to a separate screen.",
+    "Implement the Dev-only role selector (Super Admin, Owner/Admin, Creator, Publisher) either in the 'More' tab or as a hidden trigger in the header, keeping it distinctly separate from the core user flow.",
+    "Ensure safe-area rules are strictly followed. The top workspace header must sit safely below the notch, and the bottom tabs above the home indicator.",
+    "Utilize 'shadow_tier': 1 for data cards to achieve the polished, subtle iOS native feel.",
+    "Dashboard layout should prioritize touch-friendly interactions: use a horizontal scroll for summary cards (Active Campaigns, etc.) to save vertical space, followed by vertical lists for pending tasks and activity.",
+    "All placeholder screens must include a functional 'Back' action (if pushed onto a stack) or a clear top-level header if accessed via tabs."
+  ]
+}

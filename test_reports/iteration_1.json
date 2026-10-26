@@ -1,0 +1,42 @@
+{
+  "summary": "Frontend-only test of ProfileVoice Phase 1 (Expo web preview, 390x844 + 320x640) with Playwright. Almost everything works: splash/role picker, dashboard counts (they match src/data/mock.ts for all 4 roles), summary-card navigation, quick actions, placeholder Back/Home, header buttons, role switching (chip sheet + More), the role-based More modules and Create menu, tab selected state, task/campaign filters, row details and toasts. One CRITICAL bug: tapping 'Exit demo mode' gives a blank screen with an endless 'Maximum update depth exceeded' error, because the splash and the tabs Home both use the route '/'. The same loop happens when you open or reload any tab route (/tasks, /campaigns, /more) without a role, so reloading only returns to the splash when you are on '/'. No deprecated Expo packages detected (no expo-av / expo-barcode-scanner / expo-background-fetch). No react-native SafeAreaView misuse (react-native-safe-area-context insets are used).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "More > Exit demo mode", "issue": "Tapping it gives a blank white screen and an endless 'Maximum update depth exceeded' error. You never get back to the splash. Reproduced in a clean flow: Enter Demo -> tab-more -> exit-demo-button.", "testID": "exit-demo-button", "priority": "CRITICAL"},
+      {"component": "Tabs route guard / reload", "issue": "Opening or reloading /tasks, /campaigns or /more with no role (for example a page refresh while on those tabs) gives the same blank screen and 'Maximum update depth exceeded' loop instead of the splash. Opening /module/<key> with no role correctly redirects to the splash.", "testID": "tasks-screen, campaigns-screen, more-screen", "priority": "HIGH"},
+      {"component": "create-menu / role-switcher routes without a role", "issue": "Opening /create-menu with no role shows Super Admin create options (no role guard). Opening /role-switcher with no role also logs 'Maximum update depth exceeded' (its backdrop is the tabs '/' route).", "testID": "create-menu-sheet, role-switcher-sheet", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home (320px)", "issues": ["Summary card labels and hints are cut off with ellipsis: 'Active camp…', 'Pending appr…', 'Scheduled p…', 'Waiting on a deci…'. Let the label wrap to 2 lines or shorten it on small screens."]},
+      {"screen": "More", "issues": ["Module tile labels are cut off by numberOfLines=1: 'Schedule qu…' at 390px, and 'Content …' / 'Schedul…' at 320px. Allow 2 lines."]},
+      {"screen": "Splash (320px, web)", "issues": ["The absolutely positioned glow circle (right:-120) makes the document 440px wide, so the page can scroll sideways on web. Add overflow:'hidden' to the root."]},
+      {"screen": "Home header", "issues": ["Touch targets below 44pt: header-avatar-button is 38x38, active-role-chip is 32pt tall, and the 'See all'/'All tasks' links are 32pt tall (these have hitSlop=12, which is fine)."]},
+      {"screen": "Splash role list", "issues": ["The role options have no accessibilityState (checked/selected), so screen readers cannot tell which role is picked."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [".screenshots/home.png", ".screenshots/exit_clean.png", ".screenshots/s_home.png", ".screenshots/s_more.png"],
+  "action_items": [
+    "CRITICAL: Fix the route clash at '/'. app/index.tsx (splash) and app/(tabs)/index.tsx (home) both resolve to '/'. Inside the tabs, router.replace('/') in app/(tabs)/more.tsx:30 and <Redirect href='/'> in app/(tabs)/_layout.tsx:47 resolve to (tabs)/index, so after exitDemo() the tabs layout keeps redirecting to itself forever. Recommended fix: give one of them a unique path, for example rename app/(tabs)/index.tsx to app/(tabs)/home.tsx (update Tabs.Screen/NativeTabs.Trigger name='home' and the router.replace('/(tabs)') / router.navigate calls), or move the splash to app/welcome.tsx and redirect to '/welcome'. Then retest exit-demo-button and a reload of /tasks.",
+    "Guard app/create-menu.tsx and app/role-switcher.tsx: when there is no role, redirect to the splash route.",
+    "Small screens: allow 2 lines for summary-card labels/hints and more-module labels.",
+    "Add overflow:'hidden' to the splash root View to stop sideways scrolling on web.",
+    "Raise header-avatar-button and active-role-chip to at least 44pt (size or hitSlop).",
+    "Add accessibilityState={{checked}} / accessibilityRole='radio' to the RoleList options."
+  ],
+  "critical_code_review_comments": [
+    "app/(tabs)/more.tsx:29-32 leave(): calls router.replace('/') and then exitDemo(). With the duplicate '/' route this stays inside the tabs group, and the Redirect loop follows.",
+    "app/(tabs)/_layout.tsx:47 <Redirect href='/'> is ambiguous, because '/' is also the tabs' own index.",
+    "useActiveRole() quietly falls back to 'super_admin' when role is null (src/state/DemoContext.tsx:51). This hides guard bugs, for example create-menu showing Super Admin options with no role.",
+    "Good: all counts come from the services layer, role config is in one place, and testIDs are consistent."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (no backend)", "frontend": "~90% (10 feature groups tested; exit-demo and the reload/deep-link guard fail)"},
+  "seed_data_creation": "None (mock data only)",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The splash has staggered FadeInDown animations: wait for enter-demo-mode-button to be visible, then about 1.5s before tapping. Campaign filter chip testIDs are capitalised (filter-chip-All/Active/Scheduled/Draft/Completed); task chips are filter-chip-open/todo/progress/review/changes/ready/done. Expected Super Admin counts: 3/15/3/5, badge 11. Creator: 10/6/3/3. Publisher: 5/4/3/3. Publisher tasks 'progress' filter -> tasks-empty. Scope role-option clicks inside [data-testid=role-switcher-sheet], because the splash uses the same testIDs.",
+  "rca_of_issue": "Repro: Enter Demo Mode -> More tab -> Exit demo mode, or reload the page on /tasks. Result: blank screen and repeated console error 'Maximum update depth exceeded'. RCA: Expo Router maps both app/index.tsx and app/(tabs)/index.tsx to '/'. From inside the (tabs) group, '/' resolves to (tabs)/index. When the role is null, TabsLayout renders <Redirect href='/'>, which lands on the same tabs layout, which redirects again, forever. /module/<key> is a root-level route, so its Redirect('/') correctly reaches the splash, which confirms the RCA. Mitigation: give the splash or the home tab a unique URL (see action_items)."
+}
