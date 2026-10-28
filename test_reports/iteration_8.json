@@ -1,0 +1,36 @@
+{
+  "summary": "Phase 4 (Asset Library + Approvals) frontend-only test on the Expo web preview at 375x667, run as super_admin, admin, editor (Creator) and publisher. 80 of 81 Playwright checks passed. Library: opened from More and from the Publisher quick action; filter counts were All 9, Images 3, Videos 3, Documents 2, Posts 1, Favorites 1. Search matched names and campaign names, the empty state showed, and tapping the heart toggled the favorite without opening the card. The add sheet opened and closed from the backdrop. On web, picking a doc and an image through the file chooser created assets and opened their detail screen. Asset detail: favorite toggled; renaming with an empty name showed an error and a valid rename saved and showed in the library; linking an asset to c1 and unlinking it showed up on the campaign detail; the source link opened the task; delete worked; Creator and Publisher saw the read-only note on assets they did not add. Approvals: seed queues matched (pending t1/t7/t21, approved t10/d3, rejected t8 with its note). Rejecting with an empty or 9-character note showed an error and left the status unchanged. Rejecting with a valid note moved t1 to Rejected, set the task to Changes requested and showed task-feedback; task-review-history-button worked. Approving t7 with a note moved it to Approved with the note shown, added an asset to c3 and dropped the Home approvals count from 3 to 1. task-action-changes and draft-action-changes both open the review screen and require feedback. Creator sees only their own items, read-only. When the Creator resubmits a rejected task (t8) or draft, it goes back to Pending with a new submitted entry at the top of the history. Publisher sees no drafts, can review tasks, and can open the library. Phase 3 studio_flow regression passed. One minor bug: if you delete a task while its linked draft is in review, the draft's review history is empty.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Review history for a draft whose linked task was deleted", "issue": "The draft's history is lost. Submit d1 (linked to t9), delete t9, then open approval-item-d1: history shows 0 entries and the row's date says 'Recently'. Cause: withReview logs linked-draft submissions under kind 'task' with id t9 (DataStore.tsx:260 calls applyTaskStatus). deleteTask (DataStore.tsx:283-288) clears the draft's taskId but does not copy those reviews to kind 'draft' with id d1.", "testID": "review-history", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Library", "issues": ["The asset-fav-<id> heart is 32x32. hitSlop does not apply on web, so the touch target there is under 44pt.", "Filter chips are 36pt tall, under 44pt. The Posts and Favorites chips start off-screen at 375px; there is no hint that the row scrolls sideways."]},
+      {"screen": "Review", "issues": ["review-open-item ('Open task/draft') has minHeight 32, under 44pt.", "For the Publisher, the approvals screen title is 'Review', the same as the review screen title, which makes it unclear which screen you are on."]}
+    ],
+    "react_native_issues": [
+      {"component": "library-add-media / library-add-doc picker launch", "issue": "Possible problem on iOS, not testable on web. setSheet(false) closes the RN Modal and the system picker launches right away in the same tick. On iOS, launching a picker while a Modal is still closing often fails silently ('already presenting'). Reference: /app/frontend/app/library.tsx:50-62"}
+    ]
+  },
+  "test_report_links": ["/app/tests/ui/phase4_flows.py", "/app/tests/ui/helpers.py", "/app/tests/ui/studio_flows.py"],
+  "action_items": [
+    "LOW: In deleteTask, re-key the deleted task's reviews whose items are linked drafts (kind 'task', itemId taskId -> kind 'draft', itemId draftId) so the unlinked draft keeps its history and submitted date.",
+    "MEDIUM (native only): In library.tsx pickMedia/pickDoc, wait for the Modal to finish closing before launching ImagePicker/DocumentPicker (e.g. Modal onDismiss on iOS, or a ~300ms delay). Verify on an iOS device.",
+    "LOW: Make asset-fav-<id> 44x44 (or add padding on web), raise library filter chips to 44pt and review-open-item minHeight to 44.",
+    "LOW: Remove the approvals branch in app/module/[key].tsx (approvals-preview, approval-row-*, approval-draft-row-*, around lines 30-80). destinationHref('approvals') now goes to /approvals, so nothing can reach it."
+  ],
+  "critical_code_review_comments": [
+    "app/module/[key].tsx still contains the old approvals list (pendingApprovals/pendingDraftApprovals), which can no longer be reached. Old regression tests in studio_flows.py (unlinked_draft_approval_flow, delete_*_keeps_draft_approval) still assert approval-draft-row-* and need updating to approval-item-*.",
+    "review.tsx: the 10-character feedback rule exists only in the UI. setTaskStatus/setDraftStatus accept an empty note for 'Changes requested', and the manager-only draft-action / task-action paths rely on routing to the review screen.",
+    "In the asset ConfirmDialog onConfirm, back() runs before deleteAsset. This works, but the screen briefly renders NoAccess if the route is still mounted. Not observed in testing."
+  ],
+  "updated_files": ["/app/tests/ui/phase4_flows.py (new)"],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "99% (80/81 checks)"},
+  "seed_data_creation": "None. All data is in-memory; TEST_ prefixed assets and notes were created during the session only.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Load exec(open('/app/tests/ui/helpers.py').read(), globals()), then studio_flows.py, then phase4_flows.py. Flows: library_flow, asset_flow (enter admin/super_admin first), approvals_manager_flow (enter super_admin first), roles_flow, linked_delete_flow and regression_edge_flow (these enter their own role). Run each in a fresh session; page.goto resets data. Role ids: super_admin, admin, editor (Creator, Dev R.), publisher (Nikhil). Mounted stack screens repeat testIDs: use the vis/cv helpers and the :visible pseudo-class, and fill inputs only on the visible match. On web the pickers open a file chooser: use page.expect_file_chooser + set_files. The More module key for approvals is 'approvals' for all roles. Library has no Home quick action for the Creator; use more-module-library.",
+  "rca_of_issue": "Draft history lost: linked-draft status changes go through applyTaskStatus, which calls withReview(kind 'task', taskId). After deleteTask the draft becomes unlinked (taskId null), so reviewsFor(db, 'draft', d1) returns nothing. Repro: editor submits d1, then super_admin deletes t9, then opens Approvals > approval-item-d1, and history shows 0. Fix: re-key the reviews in deleteTask."
+}

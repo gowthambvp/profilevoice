@@ -1,7 +1,7 @@
 // LOCAL template-based demo generator. No AI service is called — copy is assembled
 // from tone phrase banks, the chosen brand voice and the brief. "Regenerate" bumps
 // `variant` to rotate through phrasings.
-import { AD_TYPES, CONTENT_TYPES, CTAS, VOICES } from "@/src/config/studio";
+import { AD_TYPES, BRAND, CONTENT_TYPES, CTAS, VOICES } from "@/src/config/studio";
 import type { DraftInput, Task } from "@/src/types";
 
 type Gen = Pick<DraftInput, "type" | "tone" | "voiceId" | "length" | "channel" | "platform" | "duration" | "topic" | "keywords" | "variant">;
@@ -57,13 +57,14 @@ const setup = (g: Gen) => {
   };
 };
 
-export function generateContent(g: Gen): { title: string; body: string } {
+function contentRaw(g: Gen): { title: string; body: string } {
   const { t, k, v, a, open, close, voice } = setup(g);
   const middles = Array.from({ length: PARAS[g.length] }, (_, i) => pick(MIDDLE, v, i)(t, a, k));
   const bullets = k.map((x) => `- ${cap(x)}`);
   switch (g.type) {
     case "post": {
-      const tags = k.slice(0, 3).map((x) => `#${x.replace(/[^a-z0-9]/gi, "").toLowerCase()}`).join(" ");
+      const brandTags = BRAND.hashtags.split(/[\s,]+/).filter(Boolean).map((x) => (x.startsWith("#") ? x : `#${x}`));
+      const tags = [...new Set([...k.slice(0, 3).map((x) => `#${x.replace(/[^a-z0-9]/gi, "").toLowerCase()}`), ...brandTags])].join(" ");
       const line =
         g.length === "Short" ? `${open} ${t}. ${close}` : `${open} ${t} — ${a}, ${k[0]} and made for you.${g.length === "Long" ? ` ${middles[0]}` : ""} ${close}`;
       const lead = g.channel === "linkedin" ? `${line}\n\nWhat’s your take? Share below.` : g.channel === "x" ? clip(line, 220) : line;
@@ -102,7 +103,7 @@ const SCENES: ((t: string, a: string, k: string[]) => string)[] = [
   () => `Logo + offer — brand lockup with CTA.`,
 ];
 
-export function generateAd(g: Gen): { title: string; body: string; cta: string } {
+function adRaw(g: Gen): { title: string; body: string; cta: string } {
   const { t, k, v, a, open, close, voice } = setup(g);
   const cta = pick(CTAS, v);
   const options = [`${cap(a)} care, naturally`, cap(t), `${cap(t)}, made ${a}`].filter((h) => h.length <= 40);
@@ -140,6 +141,29 @@ export function generateAd(g: Gen): { title: string; body: string; cta: string }
   return { title: headline, body: clip(body, 125), cta };
 }
 
+/** Brand preference: drop words the brand avoids (Branding → Words to avoid). */
+function brandClean(text: string): string {
+  const words = BRAND.avoidWords.split(",").map((w) => w.trim()).filter(Boolean);
+  const removed = words.reduce((t, w) => t.replace(new RegExp(`(?<![#\\w])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi"), ""), text);
+  // Tidy the gaps left behind ("and for ." → ".").
+  return removed
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\b(and|or|with|for|of|a|an|the) +(?=[,.!?;:])/gi, "")
+    .replace(/ +([,.!?;:])/g, "$1")
+    .replace(/,([.!?])/g, "$1")
+    .replace(/^ +| +$/gm, "");
+}
+
+export function generateContent(g: Gen) {
+  const r = contentRaw(g);
+  return { title: brandClean(r.title), body: brandClean(r.body) };
+}
+
+export function generateAd(g: Gen) {
+  const r = adRaw(g);
+  return { ...r, title: brandClean(r.title), body: brandClean(r.body) };
+}
+
 function guessType(kind: "content" | "ad", task?: Task): string {
   const s = task?.title.toLowerCase() ?? "";
   if (kind === "ad") return s.includes("video") || s.includes("reel") ? "videoad" : s.includes("hook") || s.includes("script") ? "adscript" : "imagead";
@@ -159,8 +183,8 @@ export function blankDraft(kind: "content" | "ad", type: string | undefined, cid
     title: "",
     body: "",
     cta: kind === "ad" ? "Shop now" : "",
-    tone: "Warm",
-    voiceId: "hc-core",
+    tone: BRAND.defaultTone,
+    voiceId: BRAND.defaultVoice,
     length: "Medium",
     channel: task?.channels[0] ?? "instagram",
     ratio: t === "videoad" ? "9:16" : "1:1",

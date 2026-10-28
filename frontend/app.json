@@ -39,7 +39,13 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-status-bar",
-      "@react-native-vector-icons/ionicons"
+      "@react-native-vector-icons/ionicons",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Add your photos and videos to the asset library"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

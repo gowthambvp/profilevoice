@@ -100,6 +100,10 @@ export default function StudioEditor() {
     showToast("Copied to clipboard");
   };
   const act = (status: Draft["status"], label: string) => {
+    if (status === "Changes requested" && saved) {
+      router.push((saved.taskId ? `/review?kind=task&id=${saved.taskId}` : `/review?kind=draft&id=${saved.id}`) as never);
+      return;
+    }
     if (status !== "Draft" && !form.title.trim() && !form.body.trim()) {
       setError("Add a title or body before sending this draft on.");
       setMode("write");

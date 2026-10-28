@@ -1,0 +1,24 @@
+{
+  "summary": "Retest of Phase 4 fixes from iteration 8, run on the Expo web preview at 375x667. All 87 Playwright checks passed. Fix 1: the Creator submitted d1 (linked to t9) and the Super Admin deleted t9. d1 then appeared in Pending with the time 'Just now', not 'Recently'. Its review history showed the 'Sent for approval' entry (review-history-submitted), both when opened from the approvals list and when going to /review?kind=draft&id=d1 directly. Fix 2: deleting campaign c1 moved t9's review history to d1 in the same way. d1 stayed in Pending with its time and history, and approving it afterwards worked. Fix 3: library-add-doc and library-add-media close the sheet first. The sheet is gone from the DOM after about 290ms and the file chooser opens at about 420ms, after which the asset is created and its detail screen opens. Fix 4: asset-fav-<id> measures 44x44 and toggles the favorite, including when tapped at the edge of the old 32px area. review-open-item is 44px tall and opens /task/t1. Regression passed: approvals seed queues; reject with an empty or short note shows an error; reject and approve flows; Home count 3 to 1; library filters, search and favorites; asset rename, link, unlink, source link and delete; Creator and Publisher role rules; resubmit.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Library", "issues": ["Info only: asset-fav uses borderRadius 22, so on web the tappable area is a 44pt circle. A tap in the square's corner (about 3px from the corner) opens the asset card instead. This is acceptable."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/ui/phase4_fix_flows.py", "/app/tests/ui/phase4_flows.py", "/app/tests/ui/helpers.py"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "moveReviews (DataStore.tsx:88-94) uses drafts.find, so if more than one draft is linked to the same task, only the first one gets the moved history. This is an edge case and not reachable with the seed data.",
+    "deleteDraft leaves that draft's review entries orphaned in db.reviews. This is harmless because nothing displays them."
+  ],
+  "updated_files": ["/app/tests/ui/phase4_fix_flows.py (new)"],
+  "success_rate": {"backend": "N/A (frontend-only, all data local by design)", "frontend": "100% (87/87)"},
+  "seed_data_creation": "None. In-memory seed data, reset by page.goto.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run exec(open(...).read(), globals()) on helpers.py, studio_flows.py, phase4_flows.py and phase4_fix_flows.py, in that order. The new flows are task_delete_history_flow and campaign_delete_history_flow (these enter their own role), plus library_fix_flow and review_open_item_flow (enter super_admin first). The add sheet fade lasts about 290ms and the picker fires at about 400ms, so check sheet visibility after the filechooser event, not at a fixed 200ms."
+}

@@ -20,7 +20,11 @@ User choices: roles/terminology taken from the attached HTML; do NOT remember ro
 
 - Phase 3 complete (Oct 2026): Content Studio + Ad Studio (/studio/[kind], /studio/editor) — format, campaign + linked task, brand voice, tone, length/channel/platform/ratio/duration, local template generator (src/services/generator.ts), editable output, preview (article/post/image & video ad), copy to clipboard (expo-clipboard), save/edit/delete drafts, discard guard, role-aware approval synced with linked tasks and campaign assets, task -> studio cross-link; Publishers have no studio access; testing iterations 4-7 passed
 
+- Phase 4 complete (Oct 2026): Asset Library (/library) with image/video/document/post/favorites filters, search, local media + document picking (expo-image-picker, expo-document-picker; files stay on device), asset detail (/asset/[id]) rename, favorite, campaign link/unlink, source link, delete; Approvals (/approvals) Pending/Approved/Rejected queues for tasks + unlinked drafts; Review screen (/review) approve (optional note) / reject (feedback >= 10 chars required) with review history; feedback shown on task detail; testing iterations 8-9 passed (87/87)
+
+- Phase 5 (Publishing, Branding, Team): /publish calendar (month grid with status dots) + list (Upcoming/Paused/Failed/Published/All), /publish/[id] post detail with demo Publish now (Publishing → Published), pause/resume, retry, simulate failure, reschedule, cancel; /publish/edit schedule/reschedule form (date, 15-min time stepper + slots, channels, campaign, asset, clash + past-date validation); publishing a post completes its linked task and vice-versa; task detail "Schedule the post" for Library tasks. /branding brand kit, voices (add/edit/delete via /branding/voice), preferences (name, tagline, default voice/tone → new studio drafts, words to avoid + hashtags applied by generator); Creators view-only, Publishers no access. /team list (search, role filters, workload), /team/invite (Owner/Admin can't invite Owner/Admins), /team/[id] profile (assign task → /task/edit?assignee=, role change for non-persona members, title, accept/resend invite, deactivate/reactivate, remove → open tasks reassigned to remover). Team/voices/brand live in DataStore and sync into PEOPLE/VOICES/BRAND lookups.
+
 ## Backlog
-- P0: Phase 4 (awaiting user approval)
+- P0: Phase 6 (awaiting user approval)
 - P1: Approvals, Schedule queue, Content Studio, Ad Studio real screens
 - P2: Backend API integration, real auth

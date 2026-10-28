@@ -36,6 +36,18 @@ export default function RootLayout() {
                 <Stack.Screen name="task/edit" options={{ animation: "slide_from_bottom" }} />
                 <Stack.Screen name="studio/[kind]" options={{ animation: "slide_from_right" }} />
                 <Stack.Screen name="studio/editor" options={{ animation: "slide_from_bottom" }} />
+                <Stack.Screen name="approvals" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="review" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="library" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="asset/[id]" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="publish/index" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="publish/[id]" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="publish/edit" options={{ animation: "slide_from_bottom" }} />
+                <Stack.Screen name="branding/index" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="branding/voice" options={{ animation: "slide_from_bottom" }} />
+                <Stack.Screen name="team/index" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="team/[id]" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="team/invite" options={{ animation: "slide_from_bottom" }} />
                 <Stack.Screen name="create-menu" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
                 <Stack.Screen name="role-switcher" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
               </Stack>

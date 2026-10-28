@@ -22,6 +22,30 @@ export interface Person {
   name: string;
   initials: string;
   role: RoleId;
+  email?: string;
+  title?: string;
+  status?: "Active" | "Invited" | "Deactivated";
+  /** demo personas behind the role switcher keep their role */
+  persona?: boolean;
+}
+
+export interface BrandVoice {
+  id: string;
+  name: string;
+  trait: string;
+  signoff: string;
+}
+
+export interface BrandSettings {
+  name: string;
+  tagline: string;
+  colors: { label: string; hex: string }[];
+  defaultVoice: string;
+  defaultTone: string;
+  /** comma-separated words the generator swaps out */
+  avoidWords: string;
+  /** comma-separated hashtags added to social posts */
+  hashtags: string;
 }
 
 export interface Workspace {
@@ -52,8 +76,23 @@ export interface Asset {
   name: string;
   kind: "image" | "video" | "doc" | "post";
   addedBy: string;
-  /** task id the asset came from */
+  /** task or draft id the asset came from */
   from?: string;
+  /** local file picked from the device (demo only, not uploaded) */
+  uri?: string;
+}
+
+export type LibraryAsset = Asset & { cid: string | null };
+
+export interface Review {
+  id: string;
+  kind: "task" | "draft";
+  itemId: string;
+  action: "submitted" | "approved" | "rejected";
+  by: string;
+  note: string;
+  at: string;
+  order: number;
 }
 
 export type Priority = "High" | "Medium" | "Low";
@@ -84,16 +123,26 @@ export interface Task {
   submittedAt?: string;
 }
 
+export type PublishStatus = "Scheduled" | "Publishing" | "Published" | "Failed" | "Paused";
+
 export interface ScheduledPost {
   id: string;
   cid: string | null;
   date: string;
   time: string;
   title: string;
+  caption: string;
   channels: string[];
   owner: string;
-  state: "In progress" | "Completed";
+  status: PublishStatus;
+  /** linked publishing task, completed when the post goes live */
+  taskId?: string | null;
+  assetId?: string | null;
+  /** failure reason or other status note (demo) */
+  note?: string;
 }
+
+export type PostInput = Pick<ScheduledPost, "title" | "caption" | "cid" | "channels" | "date" | "time" | "taskId" | "assetId">;
 
 export interface ActivityItem {
   id: string;

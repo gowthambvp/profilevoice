@@ -5,7 +5,7 @@ import { useState } from "react";
 import { addDays, ChipGroup, DateField, Field, FormScreen, NoAccess, TextField, toggleIn } from "@/src/components/form";
 import { ROLES, can } from "@/src/config/roles";
 import { CHANNELS, DEMO_TODAY, PEOPLE } from "@/src/data/mock";
-import { campaignById, visibleCampaigns } from "@/src/services/dashboard";
+import { assignablePeople, campaignById, visibleCampaigns } from "@/src/services/dashboard";
 import { useDb } from "@/src/state/DataStore";
 import { useDemo } from "@/src/state/DemoContext";
 import type { Priority, Task, TaskStatus } from "@/src/types";
@@ -16,7 +16,7 @@ const STATUSES: TaskStatus[] = ["To do", "In progress", "In review", "Changes re
 
 export default function TaskEdit() {
   const router = useRouter();
-  const { id, cid } = useLocalSearchParams<{ id?: string; cid?: string }>();
+  const { id, cid, assignee: preAssignee } = useLocalSearchParams<{ id?: string; cid?: string; assignee?: string }>();
   const { db, createTask, updateTask, setTaskStatus } = useDb();
   const { role, showToast } = useDemo();
   const existing = id ? db.tasks.find((t) => t.id === id) : undefined;
@@ -26,7 +26,7 @@ export default function TaskEdit() {
   const [description, setDescription] = useState(existing?.description ?? "");
   const [campaignId, setCampaignId] = useState(preCampaign?.id ?? "");
   const [module, setModule] = useState<Task["module"]>(existing?.module ?? "Content");
-  const [assignee, setAssignee] = useState(existing?.assignee ?? (preCampaign?.team.find((p) => PEOPLE[p]?.role === "editor") ?? "dev"));
+  const [assignee, setAssignee] = useState(existing?.assignee ?? preAssignee ?? (preCampaign?.team.find((p) => PEOPLE[p]?.role === "editor") ?? "dev"));
   const [priority, setPriority] = useState<Priority>(existing?.priority ?? "Medium");
   const [due, setDue] = useState(existing?.due ?? addDays(DEMO_TODAY, 3));
   const [status, setStatus] = useState<TaskStatus>(existing?.status ?? "To do");
@@ -75,7 +75,7 @@ export default function TaskEdit() {
         <ChipGroup testIDPrefix="task-campaign-option" options={campaigns.map((c) => ({ key: c.id, label: c.name }))} selected={[campaignId]} onToggle={setCampaignId} />
       </Field>
       <Field label="Assign to" hint={team.length ? "On this campaign’s team: " + team.map((p) => PEOPLE[p]?.name).join(", ") + ". Others are added to the team." : undefined}>
-        <ChipGroup testIDPrefix="task-assignee-option" options={Object.values(PEOPLE).map((p) => ({ key: p.id, label: p.name, hint: ROLES[p.role].label }))} selected={[assignee]} onToggle={setAssignee} />
+        <ChipGroup testIDPrefix="task-assignee-option" options={assignablePeople(db).filter((p) => p.status !== "Deactivated" || p.id === assignee).map((p) => ({ key: p.id, label: p.name, hint: ROLES[p.role].label }))} selected={[assignee]} onToggle={setAssignee} />
       </Field>
       <Field label="Module">
         <ChipGroup testIDPrefix="task-module-option" options={MODULES.map((m) => ({ key: m, label: m }))} selected={[module]} onToggle={(k) => setModule(k as Task["module"])} />

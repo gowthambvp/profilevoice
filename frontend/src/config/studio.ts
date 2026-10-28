@@ -1,5 +1,6 @@
 // Content Studio + Ad Studio options (from the ProfileVoice web workspace).
-import type { AdType, ContentType } from "@/src/types";
+import { BRAND_SEED } from "@/src/data/mock";
+import type { AdType, BrandSettings, BrandVoice, ContentType } from "@/src/types";
 
 export interface StudioType<T extends string> {
   id: T;
@@ -24,11 +25,15 @@ export const AD_TYPES: StudioType<AdType>[] = [
 
 export const TONES = ["Friendly", "Professional", "Playful", "Bold", "Warm", "Premium", "Persuasive", "Witty"];
 
-export const VOICES = [
+export const VOICE_SEED: BrandVoice[] = [
   { id: "hc-core", name: "Herbal Care — Core", trait: "Warm, natural, plain words", signoff: "Rooted in nature. Made for you." },
   { id: "hc-festive", name: "Herbal Care — Festive", trait: "Celebratory, generous, family-first", signoff: "Celebrate the season, naturally." },
   { id: "launch", name: "Launch sub-brand", trait: "Bold, modern, curious", signoff: "New. Natural. Now." },
 ];
+
+/** Live brand voices + preferences. The data store keeps these in sync with Branding edits. */
+export const VOICES: BrandVoice[] = VOICE_SEED.map((v) => ({ ...v }));
+export const BRAND: BrandSettings = { ...BRAND_SEED, colors: [...BRAND_SEED.colors] };
 
 export const LENGTHS = ["Short", "Medium", "Long"] as const;
 export const RATIOS: [string, string][] = [["1:1", "Square 1:1"], ["4:5", "Portrait 4:5"], ["9:16", "Story 9:16"], ["16:9", "Landscape 16:9"]];

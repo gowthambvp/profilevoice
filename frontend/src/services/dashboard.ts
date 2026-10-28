@@ -2,7 +2,7 @@
 import { ACTIONS, ROLES, isManager, type DashboardCardKey } from "@/src/config/roles";
 import { DEMO_TODAY, PEOPLE } from "@/src/data/mock";
 import type { Db } from "@/src/state/DataStore";
-import type { Campaign, Priority, RoleId, Task } from "@/src/types";
+import type { Campaign, LibraryAsset, Priority, Review, RoleId, Task } from "@/src/types";
 
 // Approved work still has to be scheduled and published, so only Completed is closed.
 const CLOSED: Task["status"][] = ["Completed"];
@@ -49,12 +49,23 @@ export function pendingDraftApprovals(db: Db, role: RoleId) {
   return role === "editor" ? all.filter((d) => d.owner === myId(role)) : role === "publisher" ? [] : all;
 }
 
-export function upcomingScheduled(db: Db, role: RoleId) {
+/** Every scheduled post this role can see, in time order. */
+export function visiblePosts(db: Db, role: RoleId) {
   const ids = new Set(visibleCampaigns(db, role).map((c) => c.id));
-  return db.scheduled
-    .filter((s) => s.state !== "Completed" && (!s.cid || ids.has(s.cid)))
-    .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+  return db.scheduled.filter((s) => !s.cid || ids.has(s.cid)).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
 }
+
+/** Posts still waiting to go live (scheduled, paused or failed). */
+export const upcomingScheduled = (db: Db, role: RoleId) => visiblePosts(db, role).filter((s) => s.status !== "Published");
+
+/** Team members, managers first. */
+export function teamMembers(db: Db) {
+  const rank: Record<RoleId, number> = { super_admin: 0, admin: 1, editor: 2, publisher: 3 };
+  return Object.values(db.people).sort((a, b) => rank[a.role] - rank[b.role] || a.name.localeCompare(b.name));
+}
+
+/** People who can be given work (not deactivated). */
+export const assignablePeople = (db: Db) => teamMembers(db).filter((p) => p.status !== "Deactivated");
 
 export const dueSoon = (db: Db, role: RoleId) => openTasks(db, role).filter((t) => daysFromToday(t.due) <= 3);
 
@@ -130,6 +141,7 @@ export function summaryCards(db: Db, role: RoleId): SummaryCard[] {
   const manager = isManager(role);
   const visible = visibleCampaigns(db, role);
   const sched = upcomingScheduled(db, role);
+  const next = sched.find((s) => s.status === "Scheduled" && daysFromToday(s.date) >= 0);
   const overdue = openTasks(db, role).filter(isOverdue).length;
   const build: Record<DashboardCardKey, SummaryCard> = {
     campaigns: { key: "campaigns", label: "Active campaigns", hint: `${visible.length} in workspace`, count: visible.filter((c) => c.status === "Active").length, icon: "megaphone", target: "campaigns" },
@@ -149,7 +161,7 @@ export function summaryCards(db: Db, role: RoleId): SummaryCard[] {
       icon: "checkmark-done",
       target: "approvals",
     },
-    scheduled: { key: "scheduled", label: "Scheduled posts", hint: sched[0] ? `Next: ${formatDate(sched[0].date)}` : "Nothing queued", count: sched.length, icon: "calendar", target: "publish" },
+    scheduled: { key: "scheduled", label: "Scheduled posts", hint: next ? `Next: ${formatDate(next.date)}` : "Nothing queued", count: sched.length, icon: "calendar", target: "publish" },
     dueSoon: { key: "dueSoon", label: "Due this week", hint: "Overdue or next 3 days", count: dueSoon(db, role).length, icon: "time", target: "tasks" },
   };
   return ROLES[role].dashboardCards.map((k) => build[k]);
@@ -164,4 +176,51 @@ export function draftsFor(db: Db, role: RoleId, kind: "content" | "ad") {
   return db.drafts
     .filter((d) => d.kind === kind && (isManager(role) || d.owner === myId(role)))
     .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/** Asset library: unlinked assets plus assets of campaigns this role can see. */
+export function libraryAssets(db: Db, role: RoleId): LibraryAsset[] {
+  return [...db.library.map((a) => ({ ...a, cid: null })), ...visibleCampaigns(db, role).flatMap((c) => c.assets.map((a) => ({ ...a, cid: c.id })))];
+}
+export function findAsset(db: Db, id: string): LibraryAsset | undefined {
+  const lib = db.library.find((a) => a.id === id);
+  if (lib) return { ...lib, cid: null };
+  for (const c of db.campaigns) {
+    const a = c.assets.find((x) => x.id === id);
+    if (a) return { ...a, cid: c.id };
+  }
+  return undefined;
+}
+
+export const reviewsFor = (db: Db, kind: Review["kind"], id: string) => db.reviews.filter((r) => r.kind === kind && r.itemId === id).sort((a, b) => b.order - a.order);
+export const latestDecision = (db: Db, kind: Review["kind"], id: string) => reviewsFor(db, kind, id).find((r) => r.action !== "submitted");
+
+export interface QueueItem {
+  kind: Review["kind"];
+  id: string;
+  title: string;
+  owner: string;
+  cid: string | null;
+  module: string;
+  status: string;
+  decision?: Review;
+  submitted?: Review;
+}
+export type Queue = "pending" | "approved" | "rejected";
+
+/** Pending / approved / rejected queues. Creators see their own submissions. */
+export function approvalQueues(db: Db, role: RoleId): Record<Queue, QueueItem[]> {
+  const me = myId(role);
+  const ids = new Set(visibleCampaigns(db, role).map((c) => c.id));
+  const items: QueueItem[] = [
+    ...db.tasks.filter((t) => ids.has(t.cid)).map((t) => ({ kind: "task" as const, id: t.id, title: t.title, owner: t.assignee, cid: t.cid, module: t.module, status: t.status })),
+    ...(role === "publisher" ? [] : db.drafts.filter((d) => !d.taskId).map((d) => ({ kind: "draft" as const, id: d.id, title: d.title || "Untitled draft", owner: d.owner, cid: d.cid, module: d.kind === "ad" ? "Ad Studio" : "Content", status: d.status as string }))),
+  ]
+    .filter((i) => role !== "editor" || i.owner === me)
+    .map((i) => ({ ...i, decision: latestDecision(db, i.kind, i.id), submitted: reviewsFor(db, i.kind, i.id).find((r) => r.action === "submitted") }));
+  return {
+    pending: items.filter((i) => i.status === "In review"),
+    approved: items.filter((i) => i.status !== "In review" && i.decision?.action === "approved"),
+    rejected: items.filter((i) => i.status === "Changes requested" && i.decision?.action === "rejected"),
+  };
 }

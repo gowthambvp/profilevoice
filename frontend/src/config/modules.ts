@@ -30,7 +30,7 @@ export const DESTINATIONS: Record<string, Destination> = {
 };
 
 /** Destinations that have real screens. Everything else opens the placeholder. */
-const BUILT: Record<string, string> = { content: "/studio/content", ads: "/studio/ads" };
+const BUILT: Record<string, string> = { content: "/studio/content", ads: "/studio/ads", approvals: "/approvals", library: "/library", publish: "/publish", branding: "/branding", team: "/team" };
 
 export const destinationHref = (key: string, id?: string): Href =>
   (BUILT[key] ?? (id ? `/module/${key}?id=${id}` : `/module/${key}`)) as Href;

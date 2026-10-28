@@ -124,8 +124,17 @@ export const can = {
   changeDue: (r: RoleId, t: Task) => isManager(r) || (r === "publisher" && t.assignee === ROLES[r].personId),
   /** Publishers schedule approved work; they don't make content or ads. */
   useStudio: (r: RoleId) => r !== "publisher",
+  /** Schedule, reschedule and publish (demo) posts. */
+  publish: (r: RoleId) => ROLES[r].permissions.publish,
+  manageTeam: (r: RoleId) => ROLES[r].permissions.manageTeam,
+  editBrand: (r: RoleId) => isManager(r),
+  /** Only a Super Admin can add or change Owner/Admins. */
+  manageMember: (r: RoleId, target: RoleId) => ROLES[r].permissions.manageTeam && (ROLES[r].permissions.addOwners || !isManager(target)),
   editDraft: (r: RoleId, d: Draft) => isManager(r) || (d.owner === ROLES[r].personId && (d.status === "Draft" || d.status === "Changes requested")),
 };
+
+/** Roles this role may invite or assign. */
+export const assignableRoles = (r: RoleId): RoleId[] => (ROLES[r].permissions.addOwners ? ROLE_ORDER : ROLE_ORDER.filter((x) => !isManager(x)));
 
 export interface DraftAction {
   key: string;

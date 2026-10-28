@@ -4,8 +4,8 @@ import { useState } from "react";
 
 import { ChipGroup, DateField, Field, FormScreen, NoAccess, TextField, toggleIn } from "@/src/components/form";
 import { ROLES, can } from "@/src/config/roles";
-import { CHANNELS, DEMO_TODAY, PEOPLE } from "@/src/data/mock";
-import { campaignById } from "@/src/services/dashboard";
+import { CHANNELS, DEMO_TODAY } from "@/src/data/mock";
+import { assignablePeople, campaignById } from "@/src/services/dashboard";
 import { useDb } from "@/src/state/DataStore";
 import { useDemo } from "@/src/state/DemoContext";
 import type { Campaign } from "@/src/types";
@@ -75,7 +75,7 @@ export default function CampaignEdit() {
         <ChipGroup testIDPrefix="campaign-channel-option" options={Object.values(CHANNELS).map((c) => ({ key: c.id, label: c.label }))} selected={channels} onToggle={(k) => setChannels((l) => toggleIn(l, k))} />
       </Field>
       <Field label="Team" required error={errors.team} testID="campaign-team" hint="People on the team can be assigned this campaign's tasks.">
-        <ChipGroup testIDPrefix="campaign-team-option" options={Object.values(PEOPLE).map((p) => ({ key: p.id, label: p.name, hint: ROLES[p.role].label }))} selected={team} onToggle={(k) => setTeam((l) => toggleIn(l, k))} />
+        <ChipGroup testIDPrefix="campaign-team-option" options={assignablePeople(db).map((p) => ({ key: p.id, label: p.name, hint: ROLES[p.role].label }))} selected={team} onToggle={(k) => setTeam((l) => toggleIn(l, k))} />
       </Field>
       <Field label="Visibility" hint={visibility === "private" ? "Only the team and managers can see it." : "Everyone in the project can see it."}>
         <ChipGroup testIDPrefix="campaign-visibility-option" options={[{ key: "public", label: "Everyone in project" }, { key: "private", label: "Private to team" }]} selected={[visibility]} onToggle={(k) => setVisibility(k as Campaign["visibility"])} />

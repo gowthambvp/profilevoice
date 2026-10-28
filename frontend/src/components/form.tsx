@@ -225,6 +225,45 @@ export function DateField({ value, onChange, testID, placeholder = "Pick a date"
   );
 }
 
+const TIME_SLOTS = ["08:00", "09:00", "11:30", "13:00", "15:00", "18:00", "20:00"];
+const fmt12 = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return `${h % 12 === 0 ? 12 : h % 12}:${pad(m)} ${h >= 12 ? "PM" : "AM"}`;
+};
+
+/** Time picker: 15-minute steppers plus common posting slots. Value is "HH:MM". */
+export function TimeField({ value, onChange, testID }: { value: string; onChange: (hhmm: string) => void; testID: string }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
+  const step = (n: number) => {
+    const [h, m] = value.split(":").map(Number);
+    const t = (((h * 60 + m + n) % 1440) + 1440) % 1440;
+    onChange(`${pad(Math.floor(t / 60))}:${pad(t % 60)}`);
+  };
+  return (
+    <View style={{ gap: spacing.sm }}>
+      <View style={[styles.input, styles.dateBtn, { minHeight: 56, paddingHorizontal: spacing.xs }]}>
+        <Pressable testID={`${testID}-minus`} onPress={() => step(-15)} style={[styles.calNav, styles.stepBtn]} accessibilityLabel="15 minutes earlier">
+          <Icon name="remove" size={16} color={colors.onSurface} />
+        </Pressable>
+        <Text style={[styles.dateText, { textAlign: "center", fontWeight: "700" }]} testID={`${testID}-value`}>
+          {fmt12(value)}
+        </Text>
+        <Pressable testID={`${testID}-plus`} onPress={() => step(15)} style={[styles.calNav, styles.stepBtn]} accessibilityLabel="15 minutes later">
+          <Icon name="add" size={16} color={colors.onSurface} />
+        </Pressable>
+      </View>
+      <View style={styles.chipWrap}>
+        {TIME_SLOTS.map((t) => (
+          <Pressable key={t} testID={`${testID}-slot-${t.replace(":", "")}`} onPress={() => onChange(t)} style={[styles.quick, { flex: 0, paddingHorizontal: spacing.md }, t === value && styles.calOn]}>
+            <Text style={[styles.quickText, t === value && { color: colors.onBrandPrimary }]}>{fmt12(t)}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export function ConfirmDialog({ visible, title, message, confirmLabel = "Delete", onConfirm, onCancel, testID = "confirm-dialog" }: { visible: boolean; title: string; message: string; confirmLabel?: string; onConfirm: () => void; onCancel: () => void; testID?: string }) {
   const styles = useStyles();
   const { colors } = useTheme();
@@ -305,7 +344,7 @@ const useStyles = makeStyles((c) => ({
   chipTextOn: { color: c.onSurfaceInverse },
   chipHint: { fontSize: fontSize.sm, color: c.muted },
   seg: { flexDirection: "row", backgroundColor: c.neutralSoft, borderRadius: radius.md, padding: 3 },
-  segItem: { height: 38, paddingHorizontal: spacing.md, borderRadius: radius.sm + 2, justifyContent: "center" },
+  segItem: { height: 40, paddingHorizontal: spacing.md, borderRadius: radius.sm + 2, justifyContent: "center" },
   segOn: { backgroundColor: c.surfaceSecondary, ...shadow1(c) },
   segText: { fontSize: fontSize.sm + 1, fontWeight: "600", color: c.muted },
   segTextOn: { color: c.onSurface },
@@ -316,6 +355,7 @@ const useStyles = makeStyles((c) => ({
   cal: { borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surfaceSecondary, padding: spacing.md },
   calHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm },
   calNav: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: c.neutralSoft },
+  stepBtn: { width: 44, height: 44, borderRadius: 22 },
   calTitle: { fontSize: fontSize.lg - 1, fontWeight: "700", color: c.onSurface },
   calGrid: { flexDirection: "row", flexWrap: "wrap" },
   calDow: { width: "14.2857%", textAlign: "center", fontSize: fontSize.sm, color: c.muted, fontWeight: "600", paddingVertical: 4 },

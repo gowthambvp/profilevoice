@@ -1,0 +1,40 @@
+{
+  "summary": "Phase 5 frontend test on the Expo web preview at 375x667. All 88 new Playwright checks passed (Publish 28, Publisher and task-linked scheduling 10, Branding and Content Studio defaults 21, Team 25, Admin/misc 4). The phase 4 regression flows also passed: studio_flow, library_flow, approvals_manager_flow, roles_flow and regression_edge_flow. Publish: the calendar defaults to Sept 2026; month navigation, day selection and the Failed dot all work; list filters show the correct counts (Paused 1, Failed 1, Published 2, All 8). Publish now goes Publishing -> Published in about 1.2s and t6 becomes Completed. Pause/resume, simulate failure and retry, and rescheduling a Paused or Failed post to a new date (it becomes Scheduled) all work. Cancelling a post works, and the campaign and asset links open. Schedule form: errors for an empty title, no channels and a past date; the clash error for 25 Sep 09:00 Instagram vs s1; the time stepper and slots; campaign and asset chips. A new post opens its detail screen and appears in the calendar, and the dashboard count stays correct. Task t26 'Schedule the post' saves and the task moves to Ready to publish; the button then reads 'View scheduled post · Scheduled' (t6 shows the same). The 'Mark published' task action publishes the linked post. Branding: the empty name error, the 'Save preferences' / 'Saved' label, adding a voice (required and duplicate-name errors), no delete button on the default voice, deleting another voice, and the brand kit name updates. The new default voice and Playful tone are preselected in a new Content Studio post. The brand hashtags are added and the avoid words are removed. Creator sees branding read-only; Publisher has no Branding or Team. Team: list, role filters, search and empty state. Invite: name error, invalid email, duplicate email (case-insensitive), and new members open as Invited. Accept invite, resend, role change, saving the title, assigning a task with the assignee preselected, deactivating (the person disappears from assignee options), reactivating, and removing (their tasks go to the remover). Persona roles are locked and your own profile has no manage card. Owner/Admin cannot pick manager roles and sees Rohi read-only. The activity feed shows the new entries. Only minor and design issues were found (see below). No deprecated Expo packages and no SafeAreaView-from-react-native issues detected.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Activity feed (publish)", "issue": "One publish of a post linked to a task logs two entries: 'published a post (demo)' with the post title, and 'published a post' with the task title (setPostStatus adds one, then applyTaskStatus Completed adds another). Reference: /app/frontend/src/state/DataStore.tsx:364-366 and :154-157", "testID": "recent-activity-card", "priority": "low"},
+      {"component": "Home Scheduled posts card hint", "issue": "The hint shows 'Next: 23 Sept' while the demo date is 24 Sept. sched[0] is the past, Failed post s4. The hint should use the next Scheduled post on or after DEMO_TODAY. Reference: /app/frontend/src/services/dashboard.ts:163", "testID": "summary-card-scheduled", "priority": "low"},
+      {"component": "Schedule form prefill from task", "issue": "Task 'Schedule teaser 1' prefills the title as lowercase 'teaser 1', because the regex removes 'Schedule ' without capitalizing what is left. Reference: /app/frontend/app/publish/edit.tsx:21", "testID": "post-title-input", "priority": "low"},
+      {"component": "Generator avoid-words", "issue": "Removing words leaves broken text: with 'made, you' the body read 'natural ingredients and for . Go on'. The \\b regex would also turn a hashtag like '#made' into '#'. Reference: /app/frontend/src/services/generator.ts:145-148", "testID": "editor-body-input", "priority": "low"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Publish calendar / list", "issues": ["Touch targets under 44px: publish-cal-prev and publish-cal-next are 40x40, the publish-view segments are 38px tall, and the publish-filter chips are 36px tall.", "The Scheduled (#186368) and Published (#257D5C) status dots, about 6px each, are almost impossible to tell apart. Use a clearly different colour or shape for Published."]},
+      {"screen": "Schedule form", "issues": ["post-time-input-minus and post-time-input-plus are 36x36, under the 44px minimum."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/ui/phase5_flows.py", "/app/tests/ui/helpers.py"],
+  "action_items": [
+    "Log only one activity entry when publishing a post that has a linked task, or skip the task-level 'Published a post' entry in that case (DataStore.tsx setPostStatus/applyTaskStatus).",
+    "Base the Scheduled posts card hint on the next Scheduled post dated on or after DEMO_TODAY (dashboard.ts:163).",
+    "Capitalize the post title prefilled from a task (publish/edit.tsx:21).",
+    "Make brandClean also remove the stray space before punctuation, and stop it from touching hashtags (generator.ts:147).",
+    "Raise publish-cal-prev/next, post-time-input-minus/plus, the publish-view segments and the publish-filter chips to at least 44px.",
+    "Make the Scheduled and Published calendar dots easy to tell apart.",
+    "Branding save: after saving, sync the form state with the trimmed values. Otherwise a name or tagline with trailing spaces leaves the button stuck on 'Save preferences' (dirty) (branding/index.tsx:32-38)."
+  ],
+  "critical_code_review_comments": [
+    "branding/index.tsx:38 saves the trimmed name and tagline but leaves the form untrimmed, so the dirty check stays true after the save.",
+    "ChipGroup accessibilityState.selected is not rendered as aria-selected on web (chips only show selection through background colour). This is an a11y gap for screen readers on web.",
+    "removeMember: activity, drafts and posts authored by the removed person fall back to the name 'Unassigned' through person(). Consider keeping a display name for them.",
+    "applyTaskStatus marks any linked task Completed when its post is published, even if the task is still In review. This is acceptable for the demo but bypasses approval."
+  ],
+  "updated_files": ["/app/tests/ui/phase5_flows.py"],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "100% (88/88 phase 5 checks plus 5 regression flows); 4 minor bugs and 2 design issues reported"},
+  "seed_data_creation": "None persisted (in-memory). Tests create TEST_-prefixed posts, voices, members and tasks during each session.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run exec(open(...).read(), globals()) on /app/tests/ui/helpers.py, then /app/tests/ui/phase5_flows.py. Flows: publish_flow, publisher_flow, branding_flow, team_flow, misc_flow. Each enters its own role from the splash, so run each in a fresh browser_automation call or after page.goto. Results are collected in the R list. phase4_flows.library_flow and approvals_manager_flow need enter(page,'super_admin') to be called first. On web the chips do not expose aria-selected, so the selected() helper checks for background rgb(14, 46, 49). Task rows sit under an overlay that intercepts clicks; open_task() uses force-click on the last visible match. Variable names: the Creator role id is 'editor' and the Owner/Admin role id is 'admin'."
+}

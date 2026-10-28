@@ -1,17 +1,13 @@
 // Temporary destination for modules planned in later phases. Always offers a Back action.
-import { Redirect, useLocalSearchParams, useRouter, type Href } from "expo-router";
+import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Button, Card, ChannelDots, EmptyState, Icon, Pill, PressableScale, SectionHeader } from "@/src/components/ui";
+import { Button, Card, Icon, PressableScale } from "@/src/components/ui";
 import { DESTINATIONS } from "@/src/config/modules";
-import { moduleLabel } from "@/src/config/roles";
-import { format12, formatDate, pendingApprovals, pendingDraftApprovals, person, upcomingScheduled } from "@/src/services/dashboard";
-import { useDb } from "@/src/state/DataStore";
 import { useDemo } from "@/src/state/DemoContext";
 import { fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
-import type { ModuleKey } from "@/src/types";
 
 export default function ModulePlaceholder() {
   const styles = useStyles();
@@ -20,16 +16,11 @@ export default function ModulePlaceholder() {
   const router = useRouter();
   const { key } = useLocalSearchParams<{ key: string }>();
   const { role, config } = useDemo();
-  const { db } = useDb();
   if (!role) return <Redirect href="/" />;
 
   const dest = DESTINATIONS[key] ?? { key, title: "Coming soon", icon: "construct-outline", description: "This screen is planned for a later phase.", phase: "Planned for a later phase" };
-  const title = key in DESTINATIONS && ["approvals", "publish"].includes(key) ? moduleLabel(key as ModuleKey, role) : dest.title;
+  const title = dest.title;
   const back = () => (router.canGoBack() ? router.back() : router.replace("/home"));
-
-  const approvals = key === "approvals" ? pendingApprovals(db, role) : [];
-  const draftApprovals = key === "approvals" ? pendingDraftApprovals(db, role) : [];
-  const scheduled = key === "publish" ? upcomingScheduled(db, role) : [];
 
   return (
     <View style={styles.root} testID={`placeholder-screen-${key}`}>
@@ -57,67 +48,6 @@ export default function ModulePlaceholder() {
             </View>
           </Card>
         </Animated.View>
-
-        {key === "approvals" ? (
-          <>
-            <SectionHeader title={role === "editor" ? "Your work awaiting approval" : "Waiting on a decision"} />
-            <Card testID="approvals-preview">
-              {approvals.length || draftApprovals.length ? (
-                <>
-                {draftApprovals.map((d) => (
-                  <PressableScale key={d.id} testID={`approval-draft-row-${d.id}`} onPress={() => router.push(`/studio/editor?id=${d.id}` as Href)} style={[styles.row, styles.divider]} scaleTo={0.985}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.rowTitle}>{d.title || "Untitled draft"}</Text>
-                      <Text style={styles.rowMeta}>
-                        {d.kind === "ad" ? "Ad Studio" : "Content Studio"} draft · from {person(d.owner).name} · Recently
-                      </Text>
-                    </View>
-                    <Pill label="Pending" tone="warning" />
-                  </PressableScale>
-                ))}
-                {approvals.map((a, i) => (
-                  <PressableScale key={a.id} testID={`approval-row-${a.id}`} onPress={() => router.push(`/task/${a.id}` as Href)} style={[styles.row, i < approvals.length - 1 && styles.divider]} scaleTo={0.985}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.rowTitle}>{a.title}</Text>
-                      <Text style={styles.rowMeta}>
-                        {a.module} · from {person(a.assignee).name} · {a.submittedAt ?? "Recently"}
-                      </Text>
-                    </View>
-                    <Pill label="Pending" tone="warning" />
-                  </PressableScale>
-                ))}
-                </>
-              ) : (
-                <EmptyState icon="checkmark-done-outline" title="Nothing to review" message="New submissions will show up here." />
-              )}
-            </Card>
-          </>
-        ) : null}
-
-        {key === "publish" ? (
-          <>
-            <SectionHeader title="Upcoming posts" />
-            <Card testID="schedule-preview">
-              {scheduled.length ? (
-                scheduled.map((s, i) => (
-                  <View key={s.id} style={[styles.row, i < scheduled.length - 1 && styles.divider]}>
-                    <View style={styles.dateBox}>
-                      <Text style={styles.dateDay}>{formatDate(s.date).split(" ")[0]}</Text>
-                      <Text style={styles.dateMon}>{formatDate(s.date).split(" ")[1]}</Text>
-                    </View>
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={styles.rowTitle}>{s.title}</Text>
-                      <Text style={styles.rowMeta}>{format12(s.time)}</Text>
-                    </View>
-                    <ChannelDots ids={s.channels} />
-                  </View>
-                ))
-              ) : (
-                <EmptyState icon="calendar-outline" title="Queue is empty" message="Approved work scheduled to go live will appear here." />
-              )}
-            </Card>
-          </>
-        ) : null}
 
         <View style={{ gap: spacing.md, marginTop: spacing.xl }}>
           <Button testID="placeholder-back-primary" label="Back" icon="arrow-back" onPress={back} />

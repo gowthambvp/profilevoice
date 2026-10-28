@@ -9,7 +9,7 @@ import { ConfirmDialog, DateField, HeaderIconButton, StackHeader } from "@/src/c
 import { MODULE_ICON, priorityTone } from "@/src/components/rows";
 import { Avatar, Button, Card, ChannelDots, EmptyState, Icon, Pill, PressableScale, SectionHeader, statusTone } from "@/src/components/ui";
 import { ROLES, can, taskActions, waitingNote } from "@/src/config/roles";
-import { campaignById, dueLabel, formatDate, isOpen, person } from "@/src/services/dashboard";
+import { campaignById, dueLabel, formatDate, isOpen, latestDecision, person, reviewsFor } from "@/src/services/dashboard";
 import { useDb } from "@/src/state/DataStore";
 import { useDemo } from "@/src/state/DemoContext";
 import { fontSize, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -48,6 +48,10 @@ export default function TaskDetail() {
 
   const studioKind = t.module === "Content" ? "content" : t.module === "Ad Studio" ? "ads" : null;
   const linkedDraft = db.drafts.find((d) => d.taskId === t.id);
+  const post = db.scheduled.find((s) => s.taskId === t.id);
+  const decision = latestDecision(db, "task", t.id);
+  const feedback = t.status === "Changes requested" && decision?.action === "rejected" && decision.note ? decision : undefined;
+  const hasHistory = reviewsFor(db, "task", t.id).length > 0;
 
   const remove = () => {
     setConfirm(false);
@@ -102,11 +106,21 @@ export default function TaskDetail() {
               icon={a.icon}
               variant={a.variant}
               onPress={() => {
+                if (a.key === "changes") {
+                  router.push(`/review?kind=task&id=${t.id}` as Href);
+                  return;
+                }
                 setTaskStatus(t.id, a.status, role);
                 showToast(`Status: ${a.status}`);
               }}
             />
           ))}
+          {feedback ? (
+            <View style={styles.feedback} testID="task-feedback">
+              <Text style={styles.feedbackTitle}>Feedback from {person(feedback.by).name}</Text>
+              <Text style={styles.desc}>“{feedback.note}”</Text>
+            </View>
+          ) : null}
           {note ? (
             <View style={styles.note} testID="task-waiting-note">
               <Icon name="information-circle-outline" size={15} color={colors.muted} />
@@ -122,6 +136,16 @@ export default function TaskDetail() {
               onPress={() => router.push((linkedDraft ? `/studio/editor?id=${linkedDraft.id}` : `/studio/editor?kind=${studioKind}&taskId=${t.id}&cid=${t.cid}`) as Href)}
             />
           ) : null}
+          {t.module === "Library" && isOpen(t) && can.publish(role) && (manage || t.assignee === ROLES[role].personId) ? (
+            <Button
+              testID="task-schedule-post-button"
+              label={post ? `View scheduled post · ${post.status}` : "Schedule the post"}
+              icon="calendar-outline"
+              variant="secondary"
+              onPress={() => router.push((post ? `/publish/${post.id}` : `/publish/edit?taskId=${t.id}`) as Href)}
+            />
+          ) : null}
+          {hasHistory ? <Button testID="task-review-history-button" label="Review history" icon="time-outline" variant="ghost" onPress={() => router.push(`/review?kind=task&id=${t.id}` as Href)} /> : null}
         </Card>
 
         <SectionHeader title="Details" />
@@ -191,6 +215,8 @@ const useStyles = makeStyles((c) => ({
   campLink: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", maxWidth: "100%", marginTop: spacing.xs, paddingHorizontal: spacing.md, minHeight: 36, borderRadius: radius.pill, backgroundColor: c.brandTertiary },
   campText: { fontSize: fontSize.sm + 1, fontWeight: "600", color: c.onBrandTertiary, flexShrink: 1 },
   note: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start" },
+  feedback: { padding: spacing.md, borderRadius: radius.md, backgroundColor: c.errorSoft, gap: 4 },
+  feedbackTitle: { fontSize: fontSize.sm + 1, fontWeight: "700", color: c.error },
   noteText: { flex: 1, fontSize: fontSize.sm + 1, color: c.muted, lineHeight: 17 },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, padding: spacing.lg, minHeight: 56 },
   rowCol: { padding: spacing.lg, gap: spacing.sm },
